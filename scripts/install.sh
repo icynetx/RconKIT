@@ -14,11 +14,11 @@ sudo_cmd() { if [ "$(id -u 2>/dev/null || echo 1)" = "0" ]; then "$@"; elif need
 
 bootstrap_package() {
   pkg="$1"
-  if need apt; then sudo_cmd apt update && sudo_cmd apt install -y "$pkg" && return 0; fi
-  if need dnf; then sudo_cmd dnf install -y "$pkg" && return 0; fi
-  if need pacman; then sudo_cmd pacman -Sy --needed --noconfirm "$pkg" && return 0; fi
-  if need apk; then sudo_cmd apk add "$pkg" && return 0; fi
-  if need brew; then brew install "$pkg" && return 0; fi
+  if need apt; then run_quiet sudo_cmd apt update && run_quiet sudo_cmd apt install -y "$pkg" && return 0; fi
+  if need dnf; then run_quiet sudo_cmd dnf install -y "$pkg" && return 0; fi
+  if need pacman; then run_quiet sudo_cmd pacman -Sy --needed --noconfirm "$pkg" && return 0; fi
+  if need apk; then run_quiet sudo_cmd apk add "$pkg" && return 0; fi
+  if need brew; then run_quiet brew install "$pkg" && return 0; fi
   return 1
 }
 
@@ -46,7 +46,7 @@ fetch_zip() {
   tmp_dir="$(mktemp -d 2>/dev/null || mktemp -d -t reconkit)"
   zip_file="$tmp_dir/reconkit.zip"
   say "[*] Downloading ReconKit ZIP fallback"
-  if need curl; then curl -fL --connect-timeout 30 --max-time 180 "$ZIP_URL" -o "$zip_file"; else ensure_command wget wget "Install curl or wget first."; wget -O "$zip_file" "$ZIP_URL"; fi
+  if need curl; then run_quiet curl -fL --connect-timeout 30 --max-time 180 "$ZIP_URL" -o "$zip_file"; else ensure_command wget wget "Install curl or wget first."; run_quiet wget -O "$zip_file" "$ZIP_URL"; fi
   python3 - "$zip_file" "$INSTALL_DIR" <<'PYZIP'
 import shutil
 import sys
@@ -70,7 +70,7 @@ PYZIP
 mkdir -p "$(dirname "$INSTALL_DIR")"
 if [ -d "$INSTALL_DIR/.git" ]; then
   say "[*] Updating existing ReconKit checkout: $INSTALL_DIR"
-  if ! git -C "$INSTALL_DIR" pull --ff-only; then
+  if ! run_quiet git -C "$INSTALL_DIR" pull --ff-only; then
     say "[!] git pull failed; keeping existing checkout and continuing"
   fi
 elif [ -e "$INSTALL_DIR" ]; then
@@ -81,9 +81,9 @@ else
   say "[*] Cloning ReconKit into $INSTALL_DIR"
   if need git; then
     if need timeout; then
-      timeout "$GIT_TIMEOUT" git clone --depth 1 --single-branch "$REPO_URL" "$INSTALL_DIR" && clone_ok=1 || clone_ok=0
+      run_quiet timeout "$GIT_TIMEOUT" git clone --depth 1 --single-branch "$REPO_URL" "$INSTALL_DIR" && clone_ok=1 || clone_ok=0
     else
-      git -c http.lowSpeedLimit=1000 -c http.lowSpeedTime="$GIT_TIMEOUT" clone --depth 1 --single-branch "$REPO_URL" "$INSTALL_DIR" && clone_ok=1 || clone_ok=0
+      run_quiet git -c http.lowSpeedLimit=1000 -c http.lowSpeedTime="$GIT_TIMEOUT" clone --depth 1 --single-branch "$REPO_URL" "$INSTALL_DIR" && clone_ok=1 || clone_ok=0
     fi
   else
     clone_ok=0
@@ -98,22 +98,22 @@ fi
 
 cd "$INSTALL_DIR"
 say "[*] Installing reconkit command for current user"
-python3 recon.py --self-install --user
+python3 recon.py --self-install --user --no-color
 
 if [ "$SKIP_TOOLS" = "1" ]; then
   say "[*] Skipping external tool installation because RECONKIT_SKIP_TOOLS=1"
 else
   if [ "$INSTALL_OPTIONAL" = "1" ]; then
     say "[*] Installing required + optional tools best-effort"
-    python3 recon.py --install-deps --with-optional
+    python3 recon.py --install-deps --with-optional --no-color
   else
     say "[*] Installing required tools best-effort"
-    python3 recon.py --install-deps
+    python3 recon.py --install-deps --no-color
   fi
 fi
 
 say "[*] Final dependency status"
-python3 recon.py --check-deps || true
+python3 recon.py --check-deps --no-color || true
 
 say "[+] Done. Try: reconkit"
 say "    If your shell cannot find it yet, open a new terminal or run: export PATH=\"$HOME/.local/bin:$PATH\""

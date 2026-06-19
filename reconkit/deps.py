@@ -333,6 +333,23 @@ def print_plan(plans: list[InstallPlan], manual: list[tuple[str, str]], *, color
         print(table(["Tool", "Install Hint"], rows, colorize=colorize, max_widths=[16, 110]))
 
 
+def run_installer_command(command: list[str]) -> tuple[int, str]:
+    try:
+        result = subprocess.run(command, capture_output=True, text=True, check=False)
+    except OSError as exc:
+        return 127, str(exc)
+    output = "\n".join(part.strip() for part in (result.stdout, result.stderr) if part and part.strip())
+    return result.returncode, output
+
+
+def summarize_installer_output(output: str, limit: int = 3) -> str:
+    lines = [line.strip() for line in output.splitlines() if line.strip()]
+    noisy_prefixes = ("go: downloading", "go: finding", "go: found", "Get:", "Hit:", "Reading package", "Building dependency", "Fetched ", "Selecting ", "Preparing ", "Unpacking ", "Setting up ", "Processing triggers")
+    useful = [line for line in lines if not line.startswith(noisy_prefixes)]
+    tail = useful[-limit:] if useful else lines[-limit:]
+    return " | ".join(tail)[:360]
+
+
 def run_install_plan(plans: list[InstallPlan], *, colorize: bool = True) -> list[str]:
     failures: list[str] = []
     updated: set[str] = set()
@@ -342,33 +359,32 @@ def run_install_plan(plans: list[InstallPlan], *, colorize: bool = True) -> list
         update_cmd = provider_update_command(plan.provider)
         if update_cmd and plan.provider not in updated:
             print(color(f"\n[*] Updating {plan.provider} package metadata...", C.CYAN, colorize))
-            update = subprocess.run(update_cmd, check=False)
+            update_code, update_output = run_installer_command(update_cmd)
             updated.add(plan.provider)
-            if update.returncode != 0:
-                print(color(f"[!] Update failed for {plan.provider}; continuing best-effort.", C.YELLOW, colorize), file=sys.stderr)
+            if update_code != 0:
+                detail = summarize_installer_output(update_output)
+                print(color(f"[!] Update failed for {plan.provider}; continuing best-effort." + (f" Detail: {detail}" if detail else ""), C.YELLOW, colorize), file=sys.stderr)
         print(color(f"\n[*] Installing {plan.tool} via {plan.provider}...", C.CYAN, colorize))
-        try:
-            result = subprocess.run(plan.command, check=False)
-        except OSError as exc:
-            print(color(f"[!] Could not launch installer for {plan.tool}: {exc}", C.YELLOW, colorize), file=sys.stderr)
-            failures.append(plan.tool)
+        result_code, result_output = run_installer_command(plan.command)
+        if result_code == 0:
+            print(color(f"[+] {plan.tool}: installed/found", C.GREEN, colorize))
             continue
-        if result.returncode == 0:
-            continue
-        if result.returncode != 0:
+        if result_code != 0:
             fallback = fallback_plan_for(plan.tool, plan.kind) if plan.provider not in {"go", "pipx", "pip"} else None
             if fallback and fallback.command != plan.command:
                 print(color(f"[!] {plan.provider} install failed for {plan.tool}; trying {fallback.provider} fallback.", C.YELLOW, colorize), file=sys.stderr)
-                try:
-                    fallback_result = subprocess.run(fallback.command, check=False)
-                except OSError as exc:
-                    print(color(f"[!] Could not launch fallback for {plan.tool}: {exc}", C.YELLOW, colorize), file=sys.stderr)
-                    fallback_result = subprocess.CompletedProcess(fallback.command, 1)
-                if fallback_result.returncode == 0:
+                fallback_code, fallback_output = run_installer_command(fallback.command)
+                if fallback_code == 0:
+                    print(color(f"[+] {plan.tool}: installed/found via {fallback.provider}", C.GREEN, colorize))
                     continue
+                result_output = fallback_output or result_output
             failures.append(plan.tool)
             level = C.RED if plan.kind == "required" else C.YELLOW
-            print(color(f"[!] Install failed for {plan.tool}; continuing best-effort.", level, colorize), file=sys.stderr)
+            detail = summarize_installer_output(result_output)
+            message = f"[!] {plan.tool}: install failed; continuing best-effort."
+            if detail:
+                message += f" Detail: {detail}"
+            print(color(message, level, colorize), file=sys.stderr)
     return failures
 
 
