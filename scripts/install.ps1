@@ -45,20 +45,26 @@ if (-not (Test-Command py) -and -not (Test-Command python)) {
 
 function Invoke-GitCloneWithTimeout {
     param([string]$Repo, [string]$Destination, [int]$TimeoutSeconds)
-    $Job = Start-Job -ScriptBlock {
-        param($RepoArg, $DestArg)
-        git clone --depth 1 --single-branch $RepoArg $DestArg
-        return $LASTEXITCODE
-    } -ArgumentList $Repo, $Destination
-    if (Wait-Job $Job -Timeout $TimeoutSeconds) {
-        Receive-Job $Job | Out-Host
-        $State = $Job.State
-        Remove-Job $Job -Force
-        return ($State -eq "Completed")
+    $TempRoot = Join-Path ([System.IO.Path]::GetTempPath()) ("reconkit-git-" + [System.Guid]::NewGuid().ToString("N"))
+    New-Item -ItemType Directory -Force -Path $TempRoot | Out-Null
+    $StdOut = Join-Path $TempRoot "git.stdout.log"
+    $StdErr = Join-Path $TempRoot "git.stderr.log"
+    try {
+        $Process = Start-Process -FilePath "git" -ArgumentList @("clone", "--depth", "1", "--single-branch", $Repo, $Destination) -NoNewWindow -PassThru -RedirectStandardOutput $StdOut -RedirectStandardError $StdErr
+        if (-not $Process.WaitForExit($TimeoutSeconds * 1000)) {
+            try { $Process.Kill() } catch {}
+            if (Test-Path $StdErr) { Get-Content $StdErr -ErrorAction SilentlyContinue | Write-Host }
+            return $false
+        }
+        if (Test-Path $StdOut) { Get-Content $StdOut -ErrorAction SilentlyContinue | Write-Host }
+        if (Test-Path $StdErr) { Get-Content $StdErr -ErrorAction SilentlyContinue | Write-Host }
+        return ($Process.ExitCode -eq 0)
+    } catch {
+        Write-Host "[!] git clone launcher failed: $_" -ForegroundColor Yellow
+        return $false
+    } finally {
+        Remove-Item -Recurse -Force $TempRoot -ErrorAction SilentlyContinue
     }
-    Stop-Job $Job -ErrorAction SilentlyContinue
-    Remove-Job $Job -Force
-    return $false
 }
 
 function Install-FromZipFallback {
@@ -82,7 +88,17 @@ if (Test-Path (Join-Path $InstallDir ".git")) {
     git -C $InstallDir pull --ff-only
     if ($LASTEXITCODE -ne 0) { Write-Host "[!] git pull failed; keeping existing checkout and continuing." -ForegroundColor Yellow }
 } elseif (Test-Path $InstallDir) {
-    throw "Install path exists but is not a git checkout: $InstallDir. Set RECONKIT_HOME to another path or remove that directory."
+    Write-Host "[!] Removing incomplete previous install directory: $InstallDir" -ForegroundColor Yellow
+    Remove-Item -Recurse -Force $InstallDir
+    Write-Step "[*] Cloning ReconKit into $InstallDir"
+    $CloneOk = $false
+    if (Test-Command git) {
+        $CloneOk = Invoke-GitCloneWithTimeout -Repo $RepoUrl -Destination $InstallDir -TimeoutSeconds $GitTimeout
+    }
+    if (-not $CloneOk) {
+        Write-Host "[!] git clone failed/timed out after about $GitTimeout seconds; trying ZIP fallback." -ForegroundColor Yellow
+        Install-FromZipFallback
+    }
 } else {
     Write-Step "[*] Cloning ReconKit into $InstallDir"
     $CloneOk = $false
