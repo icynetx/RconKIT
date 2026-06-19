@@ -59,69 +59,13 @@ ReconKit is made for:
 
 ---
 
-## 📸 See It In Action
+## 📸 Preview
 
-GitHub renders these GIFs inline, and in most browsers they autoplay automatically. They are intentionally short so visitors can understand the workflow in a few seconds without reading the whole README.
+<p align="center">
+  <img src="rnlinux.png" alt="ReconKit terminal preview">
+</p>
 
-<table>
-  <tr>
-    <td width="50%" align="center">
-      <h3>⚡ Guided Console</h3>
-      <img src="assets/demos/home-dashboard.gif" alt="ReconKit guided console demo" width="100%">
-      <br>
-      <sub>Open ReconKit like a command center and start with simple console commands.</sub>
-      <br><br>
-      <code>reconkit</code>
-    </td>
-    <td width="50%" align="center">
-      <h3>🛰️ Full Mission Scan</h3>
-      <img src="assets/demos/mission-scan.gif" alt="ReconKit mission scan demo" width="100%">
-      <br>
-      <sub>Run DNS, nmap, web, TLS, passive modules, artifacts, and reports in one flow.</sub>
-      <br><br>
-      <code>reconkit scanme.nmap.org --mission --no-whois --raw-dir artifacts -o scan.json --markdown report.md --html report.html -t 120</code>
-    </td>
-  </tr>
-  <tr>
-    <td width="50%" align="center">
-      <h3>🧠 AI-Assisted Analysis</h3>
-      <img src="assets/demos/ai-analysis.gif" alt="ReconKit AI analysis demo" width="100%">
-      <br>
-      <sub>Turn normalized scan evidence into a clear defensive analysis with OpenRouter.</sub>
-      <br><br>
-      <code>reconkit scanme.nmap.org -M safe --no-whois --ai --ai-out ai-report.md -o ai-scan.json -t 90</code>
-    </td>
-    <td width="50%" align="center">
-      <h3>📊 Clean HTML Report</h3>
-      <img src="assets/demos/html-report.gif" alt="ReconKit HTML report demo" width="100%">
-      <br>
-      <sub>Export Markdown and HTML reports that are easy to share and review.</sub>
-      <br><br>
-      <code>reconkit scanme.nmap.org -M safe --no-whois -o scan.json --markdown report.md --html report.html</code>
-    </td>
-  </tr>
-  <tr>
-    <td width="50%" align="center">
-      <h3>🧩 Dependency Installer</h3>
-      <img src="assets/demos/install-deps.gif" alt="ReconKit dependency installer demo" width="100%">
-      <br>
-      <sub>Preview or install required and optional tools without memorizing package names.</sub>
-      <br><br>
-      <code>reconkit --install-deps --with-optional --dry-run</code>
-    </td>
-    <td width="50%" align="center">
-      <h3>🔁 Delta Scan</h3>
-      <img src="assets/demos/diff-scan.gif" alt="ReconKit diff scan demo" width="100%">
-      <br>
-      <sub>Compare scans and quickly spot changes in IPs, ports, and exposure.</sub>
-      <br><br>
-      <code>reconkit scanme.nmap.org -M none --no-whois --diff old.json -o new.json</code>
-    </td>
-  </tr>
-</table>
-
-> Six demos are included on purpose: console, mission scan, AI analysis, report export, dependency setup, and scan diff. That is enough to show the full workflow without making the README heavy.
-
+ReconKit keeps the terminal clean and readable: target summary, DNS intelligence, ports, web/TLS notes, extra tooling, reports, and AI analysis stay organized in one place.
 
 ## ⚡ Quick Start
 
