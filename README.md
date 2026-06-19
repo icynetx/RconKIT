@@ -1,59 +1,69 @@
 <p align="center">
-  <img src="assets/reconkit-logo.svg" alt="ReconKit" width="180">
+  <img src="assets/reconkit-logo.jpg" alt="ReconKit" width="180">
 </p>
 
 <h1 align="center">ReconKit ⚡</h1>
 
 <p align="center">
-  <b>Beautiful, beginner-friendly, AI-ready reconnaissance console for authorized red-team and defensive exposure reviews.</b>
+  <b>Turn messy recon tools into a clean command center — fast scans, beautiful reports, and AI-assisted defensive insight from one friendly console.</b>
 </p>
 
 <p align="center">
-  <a href="https://cynetx.ir"><b>Team CynetX</b></a> •
-  <a href="https://t.me/cynetx">Telegram</a> •
-  <code>nmap</code> • <code>dig</code> • <code>whatweb</code> • <code>httpx</code> • <code>nuclei</code> • <code>OpenRouter AI</code>
+  <a href="https://cynetx.ir">
+    <img alt="Website" src="https://img.shields.io/badge/Website-cynetx.ir-00E5FF?style=for-the-badge&logo=googlechrome&logoColor=white">
+  </a>
+  <a href="https://t.me/cynetx">
+    <img alt="Telegram" src="https://img.shields.io/badge/Telegram-@cynetx-26A5E4?style=for-the-badge&logo=telegram&logoColor=white">
+  </a>
 </p>
 
 <p align="center">
   <img alt="Python" src="https://img.shields.io/badge/Python-3.10+-3776AB?style=for-the-badge&logo=python&logoColor=white">
-  <img alt="Platform" src="https://img.shields.io/badge/Linux%20%7C%20macOS%20%7C%20Windows-supported-00c853?style=for-the-badge">
-  <img alt="Safety" src="https://img.shields.io/badge/Authorized%20Recon-Only-ff9800?style=for-the-badge">
+  <img alt="Platform" src="https://img.shields.io/badge/Linux%20%7C%20macOS%20%7C%20Windows-supported-00c853?style=for-the-badge&logo=windows&logoColor=white">
+  <img alt="AI" src="https://img.shields.io/badge/OpenRouter-AI%20Analyst-7C3AED?style=for-the-badge&logo=openai&logoColor=white">
+  <img alt="Safety" src="https://img.shields.io/badge/Authorized%20Recon-Only-ff9800?style=for-the-badge&logo=hackthebox&logoColor=white">
+</p>
+
+<p align="center">
+  <code>nmap</code> • <code>dig</code> • <code>whatweb</code> • <code>httpx</code> • <code>sslscan</code> • <code>subfinder</code> • <code>nuclei</code> • <code>OpenRouter AI</code>
 </p>
 
 ---
 
 ## ✨ What Is ReconKit?
 
-ReconKit is a polished terminal reconnaissance assistant that wraps trusted security tools, cleans their output, and turns noisy scan results into readable operator dashboards and reports.
+ReconKit is a practical recon workspace for people who want results, not chaos. Give it a domain or IP, and it brings together tools like `nmap`, `dig`, `whatweb`, `httpx`, `sslscan`, `nuclei`, and more — then turns the output into clean tables, useful notes, reports, and optional AI analysis.
 
-It is designed for:
+It feels like a small command center: beginners can use the guided console, while experienced operators can still run direct one-shot commands and export everything for reports.
 
-- Red-team operators doing authorized external recon.
-- Blue-team/security engineers reviewing public exposure.
-- Beginners who want a guided console instead of memorizing every command.
-- Report writers who need JSON, Markdown, HTML, raw artifacts, and optional AI analysis.
+ReconKit is made for:
 
-> **Safety note:** ReconKit is for systems you own or have explicit permission to test. It does not run brute force, exploit payloads, malware, persistence, evasion, or destructive actions.
+- Red-team operators who need fast authorized external recon.
+- Blue-team engineers checking what is exposed to the internet.
+- Students and beginners who want a clear workflow instead of random commands.
+- Consultants who need clean JSON, Markdown, HTML, raw evidence, and AI-assisted summaries.
+
+> **Safety note:** ReconKit is for assets you own or have explicit permission to test. It does not run brute force, exploit payloads, malware, persistence, evasion, or destructive actions.
 
 ---
 
 ## 🚀 Highlights
 
-- 🕹️ **Metasploit-style console**: run `reconkit`, then use `set`, `show`, `run`, `mission`, `install`, `test ai`.
-- 🛰️ **Smart recon workflow**: DNS, nmap, WHOIS, web fingerprinting, TLS checks, passive discovery, screenshots, nuclei templates.
-- 🧠 **AI analyst mode**: send normalized scan evidence to OpenRouter and receive an English defensive analysis.
-- 📊 **Beautiful reports**: console dashboard, JSON, Markdown, HTML, diff reports, and raw evidence folders.
-- 🧩 **Dependency installer**: best-effort install using `apt`, `dnf`, `pacman`, `apk`, `brew`, `winget`, `choco`, `go install`, and Python/pip fallbacks.
-- 🪟 **Windows-friendly**: creates `reconkit.cmd`/`reconkit.ps1`, persists user PATH, and skips unsupported optional tools cleanly.
-- 🧼 **Readable output**: aligned tables, wrapped columns, concise findings, quick-take risk hints.
+- 🕹️ **Console-first workflow**: run `reconkit` and work with simple commands like `set target`, `show options`, `run`, and `mission`.
+- 🛰️ **Real recon tools, cleaner experience**: DNS, nmap, WHOIS, web fingerprinting, TLS checks, passive discovery, screenshots, and template checks.
+- 🧠 **AI analyst mode**: send normalized scan evidence to OpenRouter and get a clear defensive analysis in English.
+- 📊 **Reports without the mess**: export console output, JSON, Markdown, HTML, raw artifacts, and scan diffs.
+- 🧩 **Installer that tries to help**: uses native package managers and Go/Python fallbacks where possible.
+- 🪟 **Windows-aware**: creates native launchers, updates user PATH, and keeps running even when optional Unix tools are unavailable.
+- 🧼 **Human-readable output**: aligned tables, wrapped columns, quick-take notes, and practical next steps.
 
 ---
 
-## 📸 Demo Showcase
+## 📸 See It In Action
 
-> Put your GIFs in `assets/demos/` and GitHub will render them automatically.
+A few quick looks at the workflow you get after installation.
 
-### ⚡ Interactive Console
+### ⚡ Guided Console
 
 <p align="center">
   <img src="assets/demos/home-dashboard.gif" alt="ReconKit interactive console demo" width="900">
@@ -63,7 +73,7 @@ It is designed for:
 reconkit
 ```
 
-### 🛰️ Mission Scan
+### 🛰️ Full Mission Scan
 
 <p align="center">
   <img src="assets/demos/mission-scan.gif" alt="ReconKit mission scan demo" width="900">
@@ -73,7 +83,7 @@ reconkit
 reconkit scanme.nmap.org --mission --no-whois --raw-dir artifacts -o scan.json --markdown report.md --html report.html -t 120
 ```
 
-### 🧠 AI Analysis
+### 🧠 AI-Assisted Analysis
 
 <p align="center">
   <img src="assets/demos/ai-analysis.gif" alt="ReconKit AI analysis demo" width="900">
@@ -83,7 +93,7 @@ reconkit scanme.nmap.org --mission --no-whois --raw-dir artifacts -o scan.json -
 reconkit scanme.nmap.org -M safe --no-whois --ai --ai-out ai-report.md -o ai-scan.json -t 90
 ```
 
-### 📊 HTML Report
+### 📊 Clean HTML Report
 
 <p align="center">
   <img src="assets/demos/html-report.gif" alt="ReconKit HTML report demo" width="900">
@@ -100,19 +110,19 @@ Open `http://127.0.0.1:8080/report.html`.
 
 ## ⚡ Quick Start
 
-### 1) Install the `reconkit` command only
+### 1) Install the `reconkit` command
 
 ```bash
 python3 recon.py --self-install --user
 ```
 
-### 2) Open the interactive console
+### 2) Open your recon console
 
 ```bash
 reconkit
 ```
 
-Inside the console:
+From there, work naturally:
 
 ```text
 reconkit(no-target)> help
@@ -124,7 +134,7 @@ reconkit(example.com)> run
 reconkit(example.com)> exit
 ```
 
-### 3) Or run one-shot scans
+### 3) Prefer direct commands? Use one-shot mode
 
 ```bash
 reconkit example.com
@@ -136,7 +146,7 @@ reconkit example.com --mission --raw-dir artifacts -o scan.json --markdown repor
 
 ## 🧭 Interactive Console Guide
 
-Run `reconkit` with no arguments to enter the guided console.
+Run `reconkit` with no arguments and you get a guided console instead of a wall of flags. Set your target once, adjust the scan style, and run whenever you are ready.
 
 | Command | What it does |
 |---|---|
@@ -252,7 +262,7 @@ reconkit --check-deps
 
 ## 📦 Dependency Installer
 
-ReconKit detects available installers and builds a best-effort install plan.
+ReconKit checks what is already installed, detects your package manager, and builds a best-effort install plan. If an optional tool is not available on your OS, it tells you clearly and keeps working.
 
 | Platform | Providers |
 |---|---|
@@ -300,7 +310,7 @@ reconkit --check-deps
 | Template checks | `nuclei` |
 | Reporting helper | `jq` |
 
-Missing optional tools are shown clearly and skipped cleanly.
+Optional tools are useful, but not mandatory. If one is missing, ReconKit reports it and continues instead of breaking your scan.
 
 ---
 
@@ -316,7 +326,7 @@ Missing optional tools are shown clearly and skipped cleanly.
 
 ## 🧩 Modules
 
-Use `-M` / `--modules` to choose extra modules.
+Use `-M` / `--modules` to decide how much ReconKit should do beyond the core DNS + nmap workflow.
 
 | Module | What it runs |
 |---|---|
@@ -389,7 +399,7 @@ reconkit example.com --mission
 
 ## 🧠 AI Analysis With OpenRouter
 
-ReconKit reads AI settings from `recon_config.json`.
+ReconKit reads AI settings from `recon_config.json`, so you do not need to pass your model, endpoint, or prompt every time.
 
 Example config:
 
@@ -429,7 +439,7 @@ AI output structure:
 7. Top 5 Priorities
 8. Data Quality Notes
 
-> The AI prompt is defensive by design: no exploit payloads, no brute-force instructions, no malware, no persistence, no evasion.
+> The AI mode is designed for defensive analysis: it explains exposure, likely risk, safe validation ideas, and hardening steps — without exploit payloads, brute-force instructions, malware, persistence, or evasion.
 
 ---
 
@@ -445,51 +455,11 @@ AI output structure:
 | Diff | `--diff old.json` | Highlights changes from a previous scan. |
 | AI report | `--ai-out ai-report.md` | Saved AI analysis. |
 
-Example full report workflow:
+A complete report workflow can look like this:
 
 ```bash
 reconkit example.com --mission --raw-dir artifacts -o scan.json --markdown report.md --html report.html --ai --ai-out ai-report.md -t 120
 ```
-
----
-
-## 🎬 Recording GIFs For GitHub
-
-Install recorder:
-
-```bash
-sudo apt update
-sudo apt install -y asciinema
-```
-
-Record demos:
-
-```bash
-asciinema rec assets/demos/home-dashboard.cast -c "reconkit"
-asciinema rec assets/demos/mission-scan.cast -c "reconkit scanme.nmap.org --mission --no-whois --raw-dir artifacts -o scan.json --markdown report.md --html report.html -t 120"
-asciinema rec assets/demos/ai-analysis.cast -c "reconkit scanme.nmap.org -M safe --no-whois --ai --ai-out ai-report.md -o ai-scan.json -t 90"
-asciinema rec assets/demos/html-report.cast -c "reconkit scanme.nmap.org -M safe --no-whois -o scan.json --markdown report.md --html report.html"
-asciinema rec assets/demos/install-deps.cast -c "reconkit --install-deps --with-optional --dry-run"
-asciinema rec assets/demos/diff-scan.cast -c "reconkit scanme.nmap.org -M none --no-whois --diff old.json -o new.json"
-```
-
-Convert casts to GIFs if `agg` is installed:
-
-```bash
-agg assets/demos/home-dashboard.cast assets/demos/home-dashboard.gif
-agg assets/demos/mission-scan.cast assets/demos/mission-scan.gif
-agg assets/demos/ai-analysis.cast assets/demos/ai-analysis.gif
-agg assets/demos/html-report.cast assets/demos/html-report.gif
-agg assets/demos/install-deps.cast assets/demos/install-deps.gif
-agg assets/demos/diff-scan.cast assets/demos/diff-scan.gif
-```
-
-Tips:
-
-- Use a wide terminal: `120x34` or larger.
-- Keep colors enabled for a more cinematic GIF.
-- Use `scanme.nmap.org` for public demos because it is intentionally provided for nmap testing.
-- Clean old outputs before recording: `rm -rf artifacts scan.json report.md report.html ai-report.md old.json new.json`.
 
 ---
 
@@ -550,9 +520,9 @@ reconkit example.com --mission --ai --ai-out ai-report.md -o scan.json --html re
 
 ## 🛡️ Scope And Ethics
 
-ReconKit is built for authorized reconnaissance and defensive security. Use it only on assets you own, manage, or have written permission to test.
+ReconKit is built to help defenders and authorized operators understand exposure clearly. Keep it professional: scan only assets you own, manage, or have written permission to test.
 
-ReconKit intentionally avoids:
+By design, ReconKit avoids:
 
 - Brute force and password spraying.
 - Exploit payloads and weaponized PoCs.
@@ -563,9 +533,9 @@ ReconKit intentionally avoids:
 
 ## 👥 Team CynetX
 
-Made with ❤️ by **Team CynetX**.
+Built with ❤️ by **Team CynetX** for operators who care about clean recon, readable reports, and practical security work.
 
 - Website: https://cynetx.ir
 - Telegram: https://t.me/cynetx
 
-If ReconKit helps your workflow, star the repository and share it with operators who like clean output.
+If ReconKit makes your workflow cleaner, give the repository a star and share it with someone who still reads raw tool output by hand.
