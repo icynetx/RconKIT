@@ -96,6 +96,47 @@ GO_BOOTSTRAP_PACKAGES = {
     "winget": "GoLang.Go",
 }
 
+WINDOWS_RELEASE_TOOLS = {
+    "httpx": ("projectdiscovery", "httpx"),
+    "httpx-toolkit": ("projectdiscovery", "httpx"),
+    "subfinder": ("projectdiscovery", "subfinder"),
+    "dnsx": ("projectdiscovery", "dnsx"),
+    "katana": ("projectdiscovery", "katana"),
+    "nuclei": ("projectdiscovery", "nuclei"),
+}
+
+
+def windows_release_install_command(tool: str) -> list[str]:
+    owner, repo = WINDOWS_RELEASE_TOOLS[tool]
+    binary = "httpx" if tool == "httpx-toolkit" else tool
+    script = (
+        "$ErrorActionPreference='Stop';"
+        "$ProgressPreference='SilentlyContinue';"
+        f"$owner='{owner}';$repo='{repo}';$binary='{binary}';"
+        "$api='https://api.github.com/repos/' + $owner + '/' + $repo + '/releases/latest';"
+        "$release=Invoke-RestMethod -Headers @{'User-Agent'='ReconKit'} -Uri $api;"
+        "$asset=$release.assets | Where-Object { $_.name -match 'windows' -and $_.name -match 'amd64' -and $_.name -match '\\.(zip)$' } | Select-Object -First 1;"
+        "if (-not $asset) { throw 'No windows amd64 zip release asset found for ' + $repo };"
+        "$root=Join-Path $env:USERPROFILE '.reconkit/tools';"
+        "$bin=Join-Path $root 'bin';"
+        "$tmp=Join-Path ([System.IO.Path]::GetTempPath()) ('reconkit-' + $repo + '-' + [System.Guid]::NewGuid().ToString('N'));"
+        "New-Item -ItemType Directory -Force -Path $bin,$tmp | Out-Null;"
+        "$zip=Join-Path $tmp $asset.name;"
+        "Invoke-WebRequest -Headers @{'User-Agent'='ReconKit'} -Uri $asset.browser_download_url -OutFile $zip -UseBasicParsing;"
+        "Expand-Archive -Path $zip -DestinationPath $tmp -Force;"
+        "$exe=Get-ChildItem -Path $tmp -Recurse -Filter ($binary + '.exe') | Select-Object -First 1;"
+        "if (-not $exe) { throw 'Executable not found in release archive: ' + $binary + '.exe' };"
+        "Copy-Item -Force $exe.FullName (Join-Path $bin ($binary + '.exe'));"
+        "$old=[Environment]::GetEnvironmentVariable('Path','User');"
+        "$parts=@(); if ($old) { $parts=$old -split ';' | Where-Object { $_ } };"
+        "if ($parts -notcontains $bin) { $parts += $bin };"
+        "$new=($parts | Select-Object -Unique) -join ';';"
+        "if ($new.Length -lt 32000) { [Environment]::SetEnvironmentVariable('Path',$new,'User') };"
+        "$env:Path=$bin + ';' + $env:Path;"
+        "Remove-Item -Recurse -Force $tmp -ErrorAction SilentlyContinue"
+    )
+    return ["powershell", "-NoProfile", "-ExecutionPolicy", "Bypass", "-Command", script]
+
 
 def windows_go_direct_command() -> list[str]:
     script = (
@@ -104,8 +145,9 @@ def windows_go_direct_command() -> list[str]:
         "$file=$items | Where-Object { $_.stable -eq $true } | "
         "ForEach-Object { $_.files } | Where-Object { $_.os -eq 'windows' -and $_.arch -eq 'amd64' -and $_.kind -eq 'installer' } | Select-Object -First 1;"
         "if (-not $file) { throw 'No stable Go windows-amd64 installer found' };"
-        "$url='https://go.dev/dl/' + $file.filename;"
         "$out=Join-Path $env:TEMP $file.filename;"
+        "$url=$file.browser_download_url;"
+        "if (-not $url) { $url='https://dl.google.com/go/' + $file.filename };"
         "Invoke-WebRequest -Uri $url -OutFile $out -UseBasicParsing;"
         "Start-Process msiexec.exe -Wait -ArgumentList @('/i', $out, '/qn', '/norestart')"
     )
@@ -416,9 +458,9 @@ def tool_exists(tool: str) -> bool:
 def selected_tools(include_optional: bool) -> list[str]:
     tools = list(REQUIRED_TOOLS) + (list(OPTIONAL_TOOLS) if include_optional else [])
     if is_windows():
-        # ReconKit has Python fallbacks for DNS basics on Windows, so BIND-style
-        # Unix tools are useful but should not make the installer fail.
-        for tool in ("dig", "host"):
+        # ReconKit has Python/Windows fallbacks for basic DNS/WHOIS paths, so
+        # Unix-style tools should not make Windows setup fail.
+        for tool in ("dig", "host", "whois"):
             if tool in tools:
                 tools.remove(tool)
                 if include_optional:
@@ -428,7 +470,7 @@ def selected_tools(include_optional: bool) -> list[str]:
 
 def required_tools_for_platform() -> tuple[str, ...]:
     if is_windows():
-        return tuple(tool for tool in REQUIRED_TOOLS if tool not in {"dig", "host"})
+        return tuple(tool for tool in REQUIRED_TOOLS if tool not in {"dig", "host", "whois"})
     return REQUIRED_TOOLS
 
 
@@ -467,13 +509,15 @@ def native_plan_for(tool: str, kind: str, managers: list[str]) -> InstallPlan | 
 
 
 def fallback_plan_for(tool: str, kind: str) -> InstallPlan | None:
+    if is_windows() and tool in WINDOWS_RELEASE_TOOLS:
+        return InstallPlan(tool, kind, "github-release", windows_release_install_command(tool), "Downloads the latest Windows amd64 release into the ReconKit tools bin directory.")
     if tool in GO_INSTALLS:
         if command_exists("go"):
             return InstallPlan(tool, kind, "go", ["go", "install", GO_INSTALLS[tool]], "Installs the ProjectDiscovery/Go-based tool into ~/go/bin.")
         if is_windows():
             if command_exists("choco"):
                 return InstallPlan(tool, kind, "choco+go", install_one_command("choco", "golang"), "Installs Go first; ReconKit retries the Go tool after PATH refresh.")
-            return InstallPlan(tool, kind, "go-direct", windows_go_direct_command(), "Downloads the latest stable Go MSI directly from go.dev, then retries the Go tool.")
+            return InstallPlan(tool, kind, "go-direct", windows_go_direct_command(), "Downloads the latest stable Go MSI directly, then retries the Go tool.")
         managers = available_managers()
         for manager in managers:
             package = GO_BOOTSTRAP_PACKAGES.get(manager)
@@ -542,8 +586,12 @@ def run_install_plan(plans: list[InstallPlan], *, colorize: bool = True) -> list
             failures.append(plan.tool)
             continue
         refresh_windows_path()
+        if result.returncode == 0:
+            if is_windows():
+                ensure_path_persisted([Path.home() / ".reconkit" / "tools" / "bin"], dry_run=False, colorize=colorize)
+            continue
         if result.returncode != 0:
-            fallback = fallback_plan_for(plan.tool, plan.kind) if plan.provider not in {"go", "pipx", "pip"} else None
+            fallback = fallback_plan_for(plan.tool, plan.kind) if plan.provider not in {"go", "pipx", "pip", "github-release"} else None
             if fallback and fallback.command != plan.command:
                 print(color(f"[!] {plan.provider} install failed for {plan.tool}; trying {fallback.provider} fallback.", C.YELLOW, colorize), file=sys.stderr)
                 if fallback.provider in {"pip", "pipx"} and is_windows():
