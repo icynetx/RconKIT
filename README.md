@@ -5,7 +5,7 @@
 <h1 align="center">ReconKit ⚡</h1>
 
 <p align="center">
-  <b>Turn messy recon tools into a clean command center — fast scans, beautiful reports, and AI-assisted defensive insight from one friendly console.</b>
+  <b>A clean recon command center that installs itself, pulls in its scanner tools, and turns raw security output into readable results.</b>
 </p>
 
 <p align="center">
@@ -32,16 +32,9 @@
 
 ## ✨ What Is ReconKit?
 
-ReconKit is a practical recon workspace for people who want results, not chaos. Give it a domain or IP, and it brings together tools like `nmap`, `dig`, `whatweb`, `httpx`, `sslscan`, `nuclei`, and more — then turns the output into clean tables, useful notes, reports, and optional AI analysis.
+ReconKit is a practical recon workspace for people who want useful answers without juggling ten terminals. Give it a domain or IP, and it brings together tools like `nmap`, `dig`, `whatweb`, `httpx`, `sslscan`, `nuclei`, and more — then turns the output into clean tables, notes, reports, and optional AI analysis.
 
-It feels like a small command center: beginners can use the guided console, while experienced operators can still run direct one-shot commands and export everything for reports.
-
-ReconKit is made for:
-
-- Red-team operators who need fast authorized external recon.
-- Blue-team engineers checking what is exposed to the internet.
-- Students and beginners who want a clear workflow instead of random commands.
-- Consultants who need clean JSON, Markdown, HTML, raw evidence, and AI-assisted summaries.
+It is built to feel simple on a fresh machine: run the one-command installer, let ReconKit install itself and its scanner toolchain automatically, then start with `reconkit`. Beginners get a guided console; experienced operators still get fast one-shot commands and exportable evidence.
 
 > **Safety note:** ReconKit is for assets you own or have explicit permission to test. It does not run brute force, exploit payloads, malware, persistence, evasion, or destructive actions.
 
@@ -53,8 +46,8 @@ ReconKit is made for:
 - 🛰️ **Real recon tools, cleaner experience**: DNS, nmap, WHOIS, web fingerprinting, TLS checks, passive discovery, screenshots, and template checks.
 - 🧠 **AI analyst mode**: send normalized scan evidence to OpenRouter and get a clear defensive analysis in English.
 - 📊 **Reports without the mess**: export console output, JSON, Markdown, HTML, raw artifacts, and scan diffs.
-- 🧩 **Installer that tries to help**: uses native package managers and Go/Python fallbacks where possible.
-- 🪟 **Windows-aware**: creates native launchers, updates user PATH, and keeps running even when optional Unix tools are unavailable.
+- 🧩 **Zero-to-ready installer**: installs ReconKit and automatically attempts to install its scanner tools with native package managers, Go, Python, and PATH setup.
+- 🪟 **Windows-aware**: installs through PowerShell, handles Python/Git/tool setup where possible, creates launchers, updates user PATH, and avoids raw ANSI setup output.
 - 🧼 **Human-readable output**: aligned tables, wrapped columns, quick-take notes, and practical next steps.
 
 ---
@@ -62,18 +55,30 @@ ReconKit is made for:
 ## 📸 Preview
 
 <p align="center">
-  <img src="assets/rnlinux.png" alt="ReconKit terminal preview">
+  <img src="rnlinux.png" alt="ReconKit terminal preview">
 </p>
 
 ReconKit keeps the terminal clean and readable: target summary, DNS intelligence, ports, web/TLS notes, extra tooling, reports, and AI analysis stay organized in one place.
 
 ## ⚡ Quick Start
 
-### 1) Install the `reconkit` command
+### 1) Install ReconKit + scanner tools automatically
+
+Linux / macOS:
 
 ```bash
-python3 recon.py --self-install --user
+curl -fsSL https://raw.githubusercontent.com/icynetx/RconKIT/main/scripts/install.sh | sh
 ```
+
+Windows PowerShell:
+
+```powershell
+iwr -useb https://raw.githubusercontent.com/icynetx/RconKIT/main/scripts/install.ps1 | iex
+```
+
+The installer downloads ReconKit, installs the `reconkit` command, tries to install the scan tools it uses, updates PATH where possible, and continues with clear notes if an optional tool is unavailable on your OS.
+
+> For the smoothest first test, use a fresh VPS or clean VM. Windows is supported and the PowerShell installer is designed to set up Git, Python, ReconKit, launchers, and available tools with minimal user interaction.
 
 ### 2) Open your recon console
 
@@ -141,7 +146,7 @@ Run `reconkit` with no arguments and you get a guided console instead of a wall 
 
 ## 🛠️ Installation
 
-The fastest way is the one-command installer. It downloads ReconKit, installs the `reconkit` command for your user, then installs available tools best-effort. The installer uses a shallow git clone first and automatically falls back to downloading the GitHub ZIP if clone is slow or blocked.
+The one-command installer is the recommended path. It downloads ReconKit, installs the `reconkit` command, installs required and optional scanner tools where possible, refreshes PATH, and falls back to ZIP download if GitHub clone is slow or blocked.
 
 ### Linux / macOS — one command
 
@@ -193,28 +198,7 @@ reconkit --check-deps
 reconkit scanme.nmap.org -M safe --no-whois -t 90
 ```
 
-### Local/manual install from a cloned repo
-
-Use this when you already downloaded the project manually.
-
-```bash
-python3 recon.py --self-install --user
-reconkit --install-deps --with-optional
-reconkit --check-deps
-```
-
-Windows local install:
-
-```powershell
-Set-ExecutionPolicy -Scope CurrentUser RemoteSigned
-.\scripts\install-windows.ps1
-```
-
-Windows CMD local install:
-
-```cmd
-scripts\install-windows.cmd
-```
+Recommended first test: run it on a fresh VPS/VM so the automatic installer can prove the full setup from zero. On Windows, run PowerShell as a normal user first; use Administrator only if your package manager requires it.
 
 ### Supported systems
 
@@ -230,9 +214,9 @@ scripts\install-windows.cmd
 > On Windows, `dig` and `host` are treated as optional because they are Unix/BIND-style tools. ReconKit uses a Python DNS fallback for basic A/AAAA resolution if they are missing.
 
 
-## 📦 Dependency Installer
+## 📦 Automatic Tool Installer
 
-ReconKit checks what is already installed, detects your package manager, and builds a best-effort install plan. If an optional tool is not available on your OS, it tells you clearly and keeps working.
+ReconKit is meant to be beginner-friendly on a new system. It checks what is already installed, detects the package manager, installs its scan tools automatically where possible, adds Go/ReconKit bin directories to PATH, and keeps the scan usable even if an optional tool is not available for that OS.
 
 | Platform | Providers |
 |---|---|
@@ -280,7 +264,7 @@ reconkit --check-deps
 | Template checks | `nuclei` |
 | Reporting helper | `jq` |
 
-Optional tools are useful, but not mandatory. If one is missing, ReconKit reports it and continues instead of breaking your scan.
+Optional tools improve coverage, but ReconKit does not break just because one package is unavailable on a specific OS. It reports what happened and keeps the workflow moving.
 
 ---
 
@@ -430,65 +414,6 @@ A complete report workflow can look like this:
 
 ```bash
 reconkit example.com --mission --raw-dir artifacts -o scan.json --markdown report.md --html report.html --ai --ai-out ai-report.md -t 120
-```
-
----
-
-## 🧯 Troubleshooting
-
-| Problem | Fix |
-|---|---|
-| `reconkit: command not found` | Run `python3 recon.py --self-install --user`, then open a new terminal. |
-| GitHub clone hangs or times out | Re-run with `RECONKIT_GIT_TIMEOUT=10` so it quickly falls back to ZIP: `curl -fsSL https://raw.githubusercontent.com/icynetx/RconKIT/main/scripts/install.sh | RECONKIT_GIT_TIMEOUT=10 sh`. Use VPN/proxy if GitHub itself is blocked. |
-| `Permission denied` from old launcher | Remove the broken old launcher earlier in `PATH`, then self-install again. |
-| `httpx` missing on Ubuntu | Run `reconkit --install-deps --with-optional`; ReconKit uses `go install` fallback. |
-| `amass` unavailable in `apt` | This is normal on many distros; ReconKit uses fallback/manual notes. |
-| Windows cannot see new Go tools | Open a new PowerShell/CMD after install. |
-| ANSI color codes show as `←[31m` on Windows | Use `--no-color`, or run inside Windows Terminal/PowerShell 7. Install scripts already use `--no-color` for setup output. |
-| `winget` fails with `msstore` certificate errors | ReconKit forces `--source winget` now, so it avoids the Microsoft Store source during installs. |
-| Python was not found on Windows | The PowerShell installer tries `winget install --id Python.Python.3.12 --source winget`; reopen the terminal after install if needed. |
-| AI says empty/no content | Use `--test-ai`, verify `recon_config.json`, API key, model, and OpenRouter account limits. |
-| DNS tools missing on Windows | ReconKit falls back to Python A/AAAA resolution; use WSL/Kali for full BIND tools. |
-
----
-
-## ✅ Example Workflows
-
-### Fast exposure check
-
-```bash
-reconkit example.com -M safe --no-whois
-```
-
-### Deep scan with reports
-
-```bash
-reconkit example.com --deep -A --raw-dir artifacts -o scan.json --markdown report.md --html report.html -t 180
-```
-
-### Web/TLS focus
-
-```bash
-reconkit example.com -p 80,443,8080,8443,2083,2096 -M web,tls,http-detail --cmd
-```
-
-### Passive + DNS validation
-
-```bash
-reconkit example.com -M passive,dns-deep --raw-dir artifacts
-```
-
-### Compare changes
-
-```bash
-reconkit example.com -M none --no-whois -o old.json
-reconkit example.com -M none --no-whois --diff old.json -o new.json
-```
-
-### AI-assisted defensive report
-
-```bash
-reconkit example.com --mission --ai --ai-out ai-report.md -o scan.json --html report.html -t 120
 ```
 
 ---
