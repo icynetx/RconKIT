@@ -6,6 +6,7 @@ ZIP_URL="${RECONKIT_ZIP_URL:-https://github.com/icynetx/RconKIT/archive/refs/hea
 INSTALL_DIR="${RECONKIT_HOME:-$HOME/.reconkit/src}"
 INSTALL_OPTIONAL="${RECONKIT_INSTALL_OPTIONAL:-1}"
 SKIP_TOOLS="${RECONKIT_SKIP_TOOLS:-0}"
+GIT_TIMEOUT="${RECONKIT_GIT_TIMEOUT:-45}"
 
 say() { printf '%s\n' "$*"; }
 need() { command -v "$1" >/dev/null 2>&1; }
@@ -78,10 +79,19 @@ elif [ -e "$INSTALL_DIR" ]; then
   exit 1
 else
   say "[*] Cloning ReconKit into $INSTALL_DIR"
-  if need git && git clone --depth 1 --single-branch "$REPO_URL" "$INSTALL_DIR"; then
+  if need git; then
+    if need timeout; then
+      timeout "$GIT_TIMEOUT" git clone --depth 1 --single-branch "$REPO_URL" "$INSTALL_DIR" && clone_ok=1 || clone_ok=0
+    else
+      git -c http.lowSpeedLimit=1000 -c http.lowSpeedTime="$GIT_TIMEOUT" clone --depth 1 --single-branch "$REPO_URL" "$INSTALL_DIR" && clone_ok=1 || clone_ok=0
+    fi
+  else
+    clone_ok=0
+  fi
+  if [ "$clone_ok" = "1" ]; then
     say "[+] Clone completed"
   else
-    say "[!] git clone failed or timed out; trying ZIP fallback"
+    say "[!] git clone failed/timed out after about ${GIT_TIMEOUT}s; trying ZIP fallback"
     fetch_zip
   fi
 fi

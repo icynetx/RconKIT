@@ -5,6 +5,7 @@ $ZipUrl = if ($env:RECONKIT_ZIP_URL) { $env:RECONKIT_ZIP_URL } else { "https://g
 $InstallDir = if ($env:RECONKIT_HOME) { $env:RECONKIT_HOME } else { Join-Path $env:USERPROFILE ".reconkit\src" }
 $InstallOptional = if ($env:RECONKIT_INSTALL_OPTIONAL) { $env:RECONKIT_INSTALL_OPTIONAL } else { "1" }
 $SkipTools = if ($env:RECONKIT_SKIP_TOOLS) { $env:RECONKIT_SKIP_TOOLS } else { "0" }
+$GitTimeout = if ($env:RECONKIT_GIT_TIMEOUT) { [int]$env:RECONKIT_GIT_TIMEOUT } else { 45 }
 
 function Write-Step($Message) { Write-Host $Message -ForegroundColor Cyan }
 function Write-Ok($Message) { Write-Host $Message -ForegroundColor Green }
@@ -42,6 +43,24 @@ if (-not (Test-Command py) -and -not (Test-Command python)) {
 }
 
 
+function Invoke-GitCloneWithTimeout {
+    param([string]$Repo, [string]$Destination, [int]$TimeoutSeconds)
+    $Job = Start-Job -ScriptBlock {
+        param($RepoArg, $DestArg)
+        git clone --depth 1 --single-branch $RepoArg $DestArg
+        return $LASTEXITCODE
+    } -ArgumentList $Repo, $Destination
+    if (Wait-Job $Job -Timeout $TimeoutSeconds) {
+        Receive-Job $Job | Out-Host
+        $State = $Job.State
+        Remove-Job $Job -Force
+        return ($State -eq "Completed")
+    }
+    Stop-Job $Job -ErrorAction SilentlyContinue
+    Remove-Job $Job -Force
+    return $false
+}
+
 function Install-FromZipFallback {
     Write-Step "[*] Downloading ReconKit ZIP fallback"
     $TempRoot = Join-Path ([System.IO.Path]::GetTempPath()) ("reconkit-" + [System.Guid]::NewGuid().ToString("N"))
@@ -66,13 +85,12 @@ if (Test-Path (Join-Path $InstallDir ".git")) {
     throw "Install path exists but is not a git checkout: $InstallDir. Set RECONKIT_HOME to another path or remove that directory."
 } else {
     Write-Step "[*] Cloning ReconKit into $InstallDir"
+    $CloneOk = $false
     if (Test-Command git) {
-        git clone --depth 1 --single-branch $RepoUrl $InstallDir
-    } else {
-        $global:LASTEXITCODE = 1
+        $CloneOk = Invoke-GitCloneWithTimeout -Repo $RepoUrl -Destination $InstallDir -TimeoutSeconds $GitTimeout
     }
-    if ($LASTEXITCODE -ne 0) {
-        Write-Host "[!] git clone failed or timed out; trying ZIP fallback." -ForegroundColor Yellow
+    if (-not $CloneOk) {
+        Write-Host "[!] git clone failed/timed out after about $GitTimeout seconds; trying ZIP fallback." -ForegroundColor Yellow
         Install-FromZipFallback
     }
 }
