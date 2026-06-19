@@ -1,0 +1,19 @@
+<svg width="512" height="512" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="g" x1="64" y1="64" x2="448" y2="448" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#00E5FF"/>
+      <stop offset="0.5" stop-color="#B026FF"/>
+      <stop offset="1" stop-color="#FF2E88"/>
+    </linearGradient>
+    <filter id="glow" x="-40%" y="-40%" width="180%" height="180%">
+      <feGaussianBlur stdDeviation="10" result="blur"/>
+      <feColorMatrix in="blur" type="matrix" values="0 0 0 0 0.2 0 0 0 0 0.9 0 0 0 0 1 0 0 0 0.7 0"/>
+      <feBlend in="SourceGraphic"/>
+    </filter>
+  </defs>
+  <rect width="512" height="512" rx="112" fill="#080A14"/>
+  <path d="M256 58L410 136V245C410 342 344 424 256 454C168 424 102 342 102 245V136L256 58Z" stroke="url(#g)" stroke-width="24" filter="url(#glow)"/>
+  <path d="M171 278L226 146H300L266 233H345L235 382L267 278H171Z" fill="url(#g)" filter="url(#glow)"/>
+  <circle cx="256" cy="256" r="184" stroke="#1A2440" stroke-width="10" stroke-dasharray="16 18"/>
+  <text x="256" y="472" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="42" font-weight="800" fill="#EAF7FF">ReconKit</text>
+</svg>
