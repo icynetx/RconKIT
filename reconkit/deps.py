@@ -6,7 +6,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from .constants import OPTIONAL_TOOLS, REQUIRED_TOOLS
-from .runner import command_exists, executable_names
+from .runner import command_exists, executable_names, which_tool
 from .ui import C, color, hr, table
 
 
@@ -131,6 +131,55 @@ def detect_package_manager() -> str | None:
     return managers[0] if managers else None
 
 
+def refresh_windows_path() -> None:
+    if not is_windows():
+        return
+    try:
+        command = ["powershell", "-NoProfile", "-ExecutionPolicy", "Bypass", "-Command", "[Environment]::GetEnvironmentVariable('Path','Machine') + ';' + [Environment]::GetEnvironmentVariable('Path','User')"]
+        result = subprocess.run(command, capture_output=True, text=True, check=False, timeout=10)
+        if result.stdout.strip():
+            os.environ["PATH"] = result.stdout.strip() + os.pathsep + os.environ.get("PATH", "")
+    except (OSError, subprocess.TimeoutExpired):
+        pass
+
+
+def python_command() -> list[str] | None:
+    refresh_windows_path()
+    if command_exists("py"):
+        return [which_tool("py") or "py", "-3"]
+    for name in ("python3", "python"):
+        found = which_tool(name)
+        if not found:
+            continue
+        try:
+            result = subprocess.run([found, "--version"], capture_output=True, text=True, check=False, timeout=8)
+            output = (result.stdout + result.stderr).lower()
+            if result.returncode == 0 and "python" in output:
+                return [found]
+        except (OSError, subprocess.TimeoutExpired):
+            continue
+    return None
+
+
+def bootstrap_windows_python(colorize: bool = True) -> bool:
+    if not is_windows():
+        return True
+    if python_command():
+        return True
+    for manager in available_managers():
+        package = NATIVE_PACKAGES.get(manager, {}).get("python")
+        if not package:
+            continue
+        command = install_one_command(manager, package)
+        print(color(f"[*] Python was not found; installing Python via {manager}...", C.CYAN, colorize))
+        result = subprocess.run(command, check=False)
+        refresh_windows_path()
+        if result.returncode == 0 and python_command():
+            return True
+    print(color("[!] Python is still missing. Install Python 3, reopen PowerShell/CMD, then rerun ReconKit.", C.RED, colorize), file=sys.stderr)
+    return False
+
+
 def install_one_command(provider: str, package: str) -> list[str]:
     prefix = sudo_prefix()
     if provider == "apt":
@@ -146,7 +195,7 @@ def install_one_command(provider: str, package: str) -> list[str]:
     if provider == "choco":
         return ["choco", "install", "-y", package]
     if provider == "winget":
-        return ["winget", "install", "--id", package, "--accept-package-agreements", "--accept-source-agreements"]
+        return ["winget", "install", "--id", package, "--source", "winget", "--accept-package-agreements", "--accept-source-agreements"]
     return []
 
 
@@ -372,12 +421,9 @@ def fallback_plan_for(tool: str, kind: str) -> InstallPlan | None:
                     return InstallPlan(tool, kind, f"{manager}+go", command, "Installs Go first; re-run --install-deps --with-optional after Go is installed.")
     if tool in PIPX_INSTALLS and command_exists("pipx"):
         return InstallPlan(tool, kind, "pipx", ["pipx", "install", PIPX_INSTALLS[tool]])
-    if tool in PIPX_INSTALLS and command_exists("python3"):
-        return InstallPlan(tool, kind, "pip", ["python3", "-m", "pip", "install", "--user", PIPX_INSTALLS[tool]], "pipx is preferred when available.")
-    if tool in PIPX_INSTALLS and command_exists("py"):
-        return InstallPlan(tool, kind, "pip", ["py", "-3", "-m", "pip", "install", "--user", PIPX_INSTALLS[tool]], "Windows Python launcher fallback.")
-    if tool in PIPX_INSTALLS and command_exists("python"):
-        return InstallPlan(tool, kind, "pip", ["python", "-m", "pip", "install", "--user", PIPX_INSTALLS[tool]], "Python pip fallback.")
+    py_cmd = python_command()
+    if tool in PIPX_INSTALLS and py_cmd:
+        return InstallPlan(tool, kind, "pip", [*py_cmd, "-m", "pip", "install", "--user", PIPX_INSTALLS[tool]], "pipx is preferred when available.")
     return None
 
 
@@ -412,6 +458,8 @@ def print_plan(plans: list[InstallPlan], manual: list[tuple[str, str]], *, color
 
 
 def run_install_plan(plans: list[InstallPlan], *, colorize: bool = True) -> list[str]:
+    if is_windows():
+        bootstrap_windows_python(colorize=colorize)
     failures: list[str] = []
     updated: set[str] = set()
     for plan in plans:
@@ -426,11 +474,16 @@ def run_install_plan(plans: list[InstallPlan], *, colorize: bool = True) -> list
                 print(color(f"[!] Update failed for {plan.provider}; continuing best-effort.", C.YELLOW, colorize), file=sys.stderr)
         print(color(f"\n[*] Installing {plan.tool} via {plan.provider}...", C.CYAN, colorize))
         result = subprocess.run(plan.command, check=False)
+        refresh_windows_path()
         if result.returncode != 0:
             fallback = fallback_plan_for(plan.tool, plan.kind) if plan.provider not in {"go", "pipx", "pip"} else None
             if fallback and fallback.command != plan.command:
                 print(color(f"[!] {plan.provider} install failed for {plan.tool}; trying {fallback.provider} fallback.", C.YELLOW, colorize), file=sys.stderr)
+                if fallback.provider in {"pip", "pipx"} and is_windows():
+                    bootstrap_windows_python(colorize=colorize)
+                    fallback = fallback_plan_for(plan.tool, plan.kind) or fallback
                 fallback_result = subprocess.run(fallback.command, check=False)
+                refresh_windows_path()
                 if fallback_result.returncode == 0:
                     continue
             failures.append(plan.tool)

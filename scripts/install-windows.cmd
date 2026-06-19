@@ -2,9 +2,9 @@
 setlocal
 where py >nul 2>nul
 if %errorlevel%==0 (
-  py -3 recon.py --self-install --user
+  py -3 recon.py --self-install --user --no-color
 ) else (
-  python recon.py --self-install --user
+  python recon.py --self-install --user --no-color
 )
 if errorlevel 1 exit /b %errorlevel%
 
@@ -15,7 +15,7 @@ if exist "%RK%" goto run
 set "RK=reconkit"
 
 :run
-"%RK%" --install-deps --with-optional
-"%RK%" --check-deps
+"%RK%" --install-deps --with-optional --no-color
+"%RK%" --check-deps --no-color
 echo [+] Done. Try: reconkit
 echo     If this terminal cannot see reconkit yet, open a new CMD/PowerShell window.

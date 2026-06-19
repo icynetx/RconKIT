@@ -1,3 +1,6 @@
+import os
+import platform
+import sys
 import re
 import shutil
 import textwrap
@@ -14,6 +17,17 @@ class C:
     MAGENTA = "\033[35m"
     CYAN = "\033[36m"
     WHITE = "\033[37m"
+
+def supports_color(stream=None) -> bool:
+    if os.environ.get("NO_COLOR") or os.environ.get("RECONKIT_NO_COLOR") in {"1", "true", "yes", "on"}:
+        return False
+    if os.environ.get("RECONKIT_COLOR") in {"1", "true", "yes", "on"}:
+        return True
+    if platform.system().lower().startswith("win"):
+        return bool(os.environ.get("WT_SESSION") or os.environ.get("TERM_PROGRAM") or os.environ.get("ConEmuANSI"))
+    stream = stream or sys.stdout
+    return bool(getattr(stream, "isatty", lambda: False)())
+
 
 def color(text: str, code: str, enabled: bool = True) -> str:
     return f"{code}{text}{C.RESET}" if enabled else text

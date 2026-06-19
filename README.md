@@ -500,6 +500,9 @@ reconkit example.com --mission --raw-dir artifacts -o scan.json --markdown repor
 | `httpx` missing on Ubuntu | Run `reconkit --install-deps --with-optional`; ReconKit uses `go install` fallback. |
 | `amass` unavailable in `apt` | This is normal on many distros; ReconKit uses fallback/manual notes. |
 | Windows cannot see new Go tools | Open a new PowerShell/CMD after install. |
+| ANSI color codes show as `←[31m` on Windows | Use `--no-color`, or run inside Windows Terminal/PowerShell 7. Install scripts already use `--no-color` for setup output. |
+| `winget` fails with `msstore` certificate errors | ReconKit forces `--source winget` now, so it avoids the Microsoft Store source during installs. |
+| Python was not found on Windows | The PowerShell installer tries `winget install --id Python.Python.3.12 --source winget`; reopen the terminal after install if needed. |
 | AI says empty/no content | Use `--test-ai`, verify `recon_config.json`, API key, model, and OpenRouter account limits. |
 | DNS tools missing on Windows | ReconKit falls back to Python A/AAAA resolution; use WSL/Kali for full BIND tools. |
 

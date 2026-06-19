@@ -22,15 +22,15 @@ function Invoke-ReconKit {
 }
 
 Write-Host "[*] Installing ReconKit command for current Windows user..." -ForegroundColor Cyan
-& py -3 .\recon.py --self-install --user
-if ($LASTEXITCODE -eq 9009) { & python .\recon.py --self-install --user }
+& py -3 .\recon.py --self-install --user --no-color
+if ($LASTEXITCODE -eq 9009) { & python .\recon.py --self-install --user --no-color }
 if ($LASTEXITCODE -ne 0) { throw "ReconKit self-install failed." }
 
 Write-Host "[*] Installing ReconKit dependencies best-effort..." -ForegroundColor Cyan
-Invoke-ReconKit --install-deps --with-optional
+Invoke-ReconKit --install-deps --with-optional --no-color
 
 Write-Host "[*] Final dependency status:" -ForegroundColor Cyan
-Invoke-ReconKit --check-deps
+Invoke-ReconKit --check-deps --no-color
 
 Write-Host "[+] Done. Try: reconkit" -ForegroundColor Green
 Write-Host "    If this terminal cannot see reconkit yet, open a new PowerShell window." -ForegroundColor DarkGray

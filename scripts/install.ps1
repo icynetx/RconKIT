@@ -25,7 +25,7 @@ Write-Step "[*] Website: https://cynetx.ir | Telegram: https://t.me/cynetx"
 function Install-WinGetPackage($Id, $Name) {
     if (-not (Test-Command winget)) { throw "$Name is required and winget was not found. Install $Name manually, then rerun this command." }
     Write-Step "[*] $Name not found; trying winget install..."
-    winget install --id $Id --accept-package-agreements --accept-source-agreements
+    winget install --id $Id --source winget --accept-package-agreements --accept-source-agreements
     if ($LASTEXITCODE -ne 0) { throw "winget failed to install $Name. Install it manually, then rerun this command." }
 }
 
@@ -97,20 +97,20 @@ if (Test-Path (Join-Path $InstallDir ".git")) {
 
 Set-Location $InstallDir
 Write-Step "[*] Installing reconkit command for current user"
-Invoke-PythonReconKit @("--self-install", "--user")
+Invoke-PythonReconKit @("--self-install", "--user", "--no-color")
 
 if ($SkipTools -eq "1") {
     Write-Step "[*] Skipping external tool installation because RECONKIT_SKIP_TOOLS=1"
 } elseif ($InstallOptional -eq "1") {
     Write-Step "[*] Installing required + optional tools best-effort"
-    Invoke-PythonReconKit @("--install-deps", "--with-optional")
+    Invoke-PythonReconKit @("--install-deps", "--with-optional", "--no-color")
 } else {
     Write-Step "[*] Installing required tools best-effort"
-    Invoke-PythonReconKit @("--install-deps")
+    Invoke-PythonReconKit @("--install-deps", "--no-color")
 }
 
 Write-Step "[*] Final dependency status"
-try { Invoke-PythonReconKit @("--check-deps") } catch { Write-Host $_ -ForegroundColor Yellow }
+try { Invoke-PythonReconKit @("--check-deps", "--no-color") } catch { Write-Host $_ -ForegroundColor Yellow }
 
 Write-Ok "[+] Done. Try: reconkit"
 Write-Host "    If this terminal cannot find reconkit yet, open a new PowerShell window." -ForegroundColor DarkGray

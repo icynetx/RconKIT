@@ -16,13 +16,13 @@ from .reports import diff_reports, save_html, save_json, save_markdown
 from .scanners import parse_modules, scan_dns, scan_extra_modules, scan_nmap, scan_whois
 from .self_install import install_command_entry
 from .target import normalize_target, resolve_target, reverse_lookup, target_has_scan_endpoint
-from .ui import C, box, color, hr, pill, table
+from .ui import C, box, color, hr, pill, supports_color, table
 
 def parse_args(argv: list[str]) -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         prog="recon.py",
         formatter_class=argparse.RawDescriptionHelpFormatter,
-        description=color(f"{APP} v{VERSION} by {AUTHOR} - {TAGLINE}", C.BOLD + C.CYAN, sys.stdout.isatty()),
+        description=color(f"{APP} v{VERSION} by {AUTHOR} - {TAGLINE}", C.BOLD + C.CYAN, supports_color(sys.stdout)),
         epilog=textwrap.dedent(
             """
             Simple examples:
@@ -81,6 +81,7 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
     parser.add_argument("--cmd", "--show-commands", dest="show_commands", action="store_true", help="show exact commands")
     parser.add_argument("--explain", action="store_true", help="show switch guide in output")
     parser.add_argument("--no-color", action="store_true", help="disable colors")
+    parser.add_argument("--color", action="store_true", help="force ANSI colors")
     parser.add_argument("--no-whois", action="store_true", help="skip WHOIS")
     parser.add_argument("--install-deps", action="store_true", help="install tools best-effort using apt/dnf/pacman/apk/brew/choco/winget/go/pipx")
     parser.add_argument("--self-install", "--setup", dest="self_install", action="store_true", help="install only the reconkit command into a system/user bin directory")
@@ -141,7 +142,7 @@ def render_home(colorize: bool = True) -> str:
 
 def main(argv: list[str] | None = None) -> int:
     args = parse_args(argv or sys.argv[1:])
-    colorize = not args.no_color and sys.stdout.isatty()
+    colorize = args.color or (not args.no_color and supports_color(sys.stdout))
     started = time.monotonic()
 
     if args.version:
