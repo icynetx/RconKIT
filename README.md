@@ -62,7 +62,7 @@ ReconKit is made for:
 ## 📸 Preview
 
 <p align="center">
-  <img src="rnlinux.png" alt="ReconKit terminal preview">
+  <img src="assets/rnlinux.png" alt="ReconKit terminal preview">
 </p>
 
 ReconKit keeps the terminal clean and readable: target summary, DNS intelligence, ports, web/TLS notes, extra tooling, reports, and AI analysis stay organized in one place.
