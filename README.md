@@ -197,83 +197,88 @@ Run `reconkit` with no arguments and you get a guided console instead of a wall 
 
 ## 🛠️ Installation
 
-### Linux / Kali / Ubuntu / Debian
+The fastest way is the one-command installer. It clones ReconKit, installs the `reconkit` command for your user, then installs available tools best-effort.
+
+### Linux / macOS — one command
 
 ```bash
-sudo apt update
-sudo apt install -y python3 python3-pip git
+curl -fsSL https://raw.githubusercontent.com/icynetx/RconKIT/main/scripts/install.sh | sh
+```
+
+If you only want the ReconKit command and do **not** want external tools installed automatically:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/icynetx/RconKIT/main/scripts/install.sh | RECONKIT_SKIP_TOOLS=1 sh
+```
+
+If you want required tools only, without optional tools:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/icynetx/RconKIT/main/scripts/install.sh | RECONKIT_INSTALL_OPTIONAL=0 sh
+```
+
+### Windows PowerShell — one command
+
+```powershell
+iwr -useb https://raw.githubusercontent.com/icynetx/RconKIT/main/scripts/install.ps1 | iex
+```
+
+Command only, without external tools:
+
+```powershell
+$env:RECONKIT_SKIP_TOOLS="1"; iwr -useb https://raw.githubusercontent.com/icynetx/RconKIT/main/scripts/install.ps1 | iex
+```
+
+Required tools only:
+
+```powershell
+$env:RECONKIT_INSTALL_OPTIONAL="0"; iwr -useb https://raw.githubusercontent.com/icynetx/RconKIT/main/scripts/install.ps1 | iex
+```
+
+After installation, open a new terminal if needed:
+
+```bash
+reconkit
+reconkit --check-deps
+reconkit scanme.nmap.org -M safe --no-whois -t 90
+```
+
+### Local/manual install from a cloned repo
+
+Use this when you already downloaded the project manually.
+
+```bash
 python3 recon.py --self-install --user
 reconkit --install-deps --with-optional
 reconkit --check-deps
 ```
 
-### Fedora / RHEL-like
-
-```bash
-sudo dnf install -y python3 git
-python3 recon.py --self-install --user
-reconkit --install-deps --with-optional
-```
-
-### Arch Linux
-
-```bash
-sudo pacman -Sy --needed python git
-python3 recon.py --self-install --user
-reconkit --install-deps --with-optional
-```
-
-### Alpine Linux
-
-```bash
-sudo apk add python3 git
-python3 recon.py --self-install --user
-reconkit --install-deps --with-optional
-```
-
-### macOS
-
-```bash
-brew install python git
-python3 recon.py --self-install --user
-reconkit --install-deps --with-optional
-```
-
-### Windows PowerShell
-
-Open PowerShell in the project directory:
+Windows local install:
 
 ```powershell
 Set-ExecutionPolicy -Scope CurrentUser RemoteSigned
 .\scripts\install-windows.ps1
 ```
 
-Then open a new PowerShell window:
-
-```powershell
-reconkit
-reconkit --check-deps
-reconkit scanme.nmap.org -M safe --no-whois -t 90
-```
-
-### Windows CMD
+Windows CMD local install:
 
 ```cmd
 scripts\install-windows.cmd
 ```
 
-### Manual Windows setup
+### Supported systems
 
-```powershell
-py -3 recon.py --self-install --user
-$env:Path += ";$env:USERPROFILE\.reconkit\bin"
-reconkit --install-deps --with-optional
-reconkit --check-deps
-```
+| System | Recommended install |
+|---|---|
+| Kali / Ubuntu / Debian | `curl -fsSL .../scripts/install.sh \| sh` |
+| Fedora / RHEL-like | `curl -fsSL .../scripts/install.sh \| sh` |
+| Arch Linux | `curl -fsSL .../scripts/install.sh \| sh` |
+| Alpine Linux | `curl -fsSL .../scripts/install.sh \| sh` |
+| macOS | `curl -fsSL .../scripts/install.sh \| sh` |
+| Windows PowerShell | `iwr -useb .../scripts/install.ps1 \| iex` |
 
 > On Windows, `dig` and `host` are treated as optional because they are Unix/BIND-style tools. ReconKit uses a Python DNS fallback for basic A/AAAA resolution if they are missing.
 
----
 
 ## 📦 Dependency Installer
 
