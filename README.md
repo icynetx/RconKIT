@@ -55,7 +55,7 @@ It is built to feel simple on a fresh machine: run the one-command installer, le
 ## 📸 Preview
 
 <p align="center">
-  <img src="assets/rnlinux.png" alt="ReconKit terminal preview">
+  <img src="rnlinux.png" alt="ReconKit terminal preview">
 </p>
 
 ReconKit keeps the terminal clean and readable: target summary, DNS intelligence, ports, web/TLS notes, extra tooling, reports, and AI analysis stay organized in one place.
@@ -118,6 +118,7 @@ Run `reconkit` with no arguments and you get a guided console instead of a wall 
 | `show options` | Shows current target, profile, modules, report paths, and flags. |
 | `show modules` | Shows module presets. |
 | `show deps` | Prints dependency status. |
+| `show ai` | Shows AI endpoint, model, prompt, and safe config values. |
 | `set target example.com` | Sets the target domain, IP, or URL. |
 | `set mode fast` | Sets scan mode: `fast`, `balanced`, or `deep`. |
 | `set modules mission` | Sets module preset or comma-separated modules. |
@@ -138,6 +139,10 @@ Run `reconkit` with no arguments and you get a guided console instead of a wall 
 | `install` | Installs required + optional tools best-effort. |
 | `dryrun` | Shows dependency install plan without installing. |
 | `test ai` | Tests OpenRouter endpoint/model/API key. |
+| `ai init` | Creates/updates `recon_config.json` with default AI settings. |
+| `ai set model openrouter/free` | Saves an AI config value from the console. |
+| `ai set endpoint_url https://openrouter.ai/api/v1/chat/completions` | Saves the AI endpoint URL. |
+| `ai set-file system_prompt prompt.txt` | Loads a long system prompt from a text file. |
 | `shell <command>` | Runs a local shell command. |
 | `clear` | Clears the screen and redraws the console banner. |
 | `exit`, `quit`, `q` | Leaves the console. |
@@ -345,8 +350,12 @@ reconkit example.com --mission
 | `--ai` | `--ai` | Analyze scan results using `recon_config.json`. |
 | `--ai-timeout` | `--ai-timeout 90` | AI request timeout in seconds. |
 | `--ai-out` | `--ai-out ai-report.md` | Save AI analysis to a file. |
+| `--ai-init` | `--ai-init` | Create/update `recon_config.json` with default AI settings. |
+| `--ai-show` | `--ai-show` | Show loaded AI config safely, with API keys masked. |
+| `--ai-set` | `--ai-set model=openrouter/free` | Set and save an AI config value. Can be repeated. |
+| `--ai-set-file` | `--ai-set-file system_prompt=prompt.txt` | Load and save an AI config value from a file. Useful for long prompts. |
 | `--ai-prompt` | `--ai-prompt` | Print configured AI system prompt and exit. |
-| `--show-config` | `--show-config` | Print loaded AI config without exposing the full API key. |
+| `--show-config` | `--show-config` | Alias for `--ai-show`. |
 | `--test-ai` | `--test-ai` | Test AI endpoint/model/API key without scanning. |
 | `--version` | `--version` | Show ReconKit version and Team CynetX links. |
 
@@ -354,34 +363,77 @@ reconkit example.com --mission
 
 ## 🧠 AI Analysis With OpenRouter
 
-ReconKit reads AI settings from `recon_config.json`, so you do not need to pass your model, endpoint, or prompt every time.
+ReconKit can manage its AI settings from the CLI, so you do not need to manually edit JSON for normal setup. Settings are saved in `recon_config.json`.
 
-Example config:
-
-```json
-{
-  "provider": "openrouter",
-  "endpoint_url": "https://openrouter.ai/api/v1/chat/completions",
-  "model": "openrouter/free",
-  "api_key_env": "OPENROUTER_API_KEY",
-  "api_key": "",
-  "temperature": 0.15,
-  "max_tokens": 5000,
-  "continuation_rounds": 5,
-  "empty_response_retries": 5,
-  "retry_delay_seconds": 3,
-  "http_referer": "https://local.reconkit",
-  "x_title": "ReconKit AI Analysis"
-}
-```
-
-Recommended API key usage:
+Create the config file:
 
 ```bash
+reconkit --ai-init
+```
+
+Show the current config safely:
+
+```bash
+reconkit --ai-show
+```
+
+Set OpenRouter endpoint and model:
+
+```bash
+reconkit --ai-set endpoint_url=https://openrouter.ai/api/v1/chat/completions
+reconkit --ai-set model=openrouter/free
+```
+
+Set API key using an environment variable name, or save a direct key if you prefer local-only config:
+
+```bash
+reconkit --ai-set api_key_env=OPENROUTER_API_KEY
 export OPENROUTER_API_KEY="YOUR_OPENROUTER_API_KEY"
+
+# optional direct-key style
+reconkit --ai-set api_key=YOUR_OPENROUTER_API_KEY
+```
+
+Set a long system prompt from a text file:
+
+```bash
+reconkit --ai-set-file system_prompt=prompt.txt
+```
+
+Tune generation values:
+
+```bash
+reconkit --ai-set temperature=0.15 --ai-set max_tokens=5000
+reconkit --ai-set continuation_rounds=5 --ai-set empty_response_retries=5
+```
+
+Test the endpoint/model/key before scanning:
+
+```bash
 reconkit --test-ai
+```
+
+Run an AI-assisted scan:
+
+```bash
 reconkit example.com --deep --ai --ai-out ai-report.md -o scan.json
 ```
+
+Useful AI config keys:
+
+| Key | Meaning | Example |
+|---|---|---|
+| `endpoint_url` | OpenRouter-compatible chat completions endpoint. | `https://openrouter.ai/api/v1/chat/completions` |
+| `model` | Model/router name. | `openrouter/free` |
+| `api_key_env` | Environment variable that stores the API key. | `OPENROUTER_API_KEY` |
+| `api_key` | Direct API key stored in local config. | `sk-or-...` |
+| `system_prompt` | Main AI behavior and report instructions. | Use `--ai-set-file system_prompt=prompt.txt` |
+| `temperature` | Creativity/variance. Lower is more consistent. | `0.15` |
+| `max_tokens` | Maximum output size per response. | `5000` |
+| `continuation_rounds` | Continuation attempts when output is cut. | `5` |
+| `empty_response_retries` | Retries for empty/free-model responses. | `5` |
+| `http_referer` | OpenRouter referer header. | `https://local.reconkit` |
+| `x_title` | OpenRouter title header. | `ReconKit AI Analysis` |
 
 AI output structure:
 

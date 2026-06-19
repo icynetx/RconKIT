@@ -6,8 +6,8 @@ import time
 from datetime import datetime, timezone
 from pathlib import Path
 
-from .ai import ai_api_key, ai_key_hint, call_openrouter, load_config, render_ai_analysis, safe_config_for_display, test_ai_connection, validate_ai_config
-from .constants import APP, AUTHOR, COPYRIGHT, TAGLINE, TELEGRAM, VERSION, WEBSITE
+from .ai import ai_api_key, ai_key_hint, apply_ai_config_updates, call_openrouter, load_config, render_ai_analysis, safe_config_for_display, save_config, test_ai_connection, validate_ai_config
+from .constants import APP, AUTHOR, CONFIG_PATH, COPYRIGHT, TAGLINE, TELEGRAM, VERSION, WEBSITE
 from .console import run_console
 from .deps import install_deps, print_dependencies
 from .models import ReconReport
@@ -35,8 +35,11 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
               python3 recon.py --self-install --user        # install reconkit command only
               python3 recon.py --self-install --install-deps --with-optional
               reconkit --install-deps --with-optional
+              reconkit --ai-init
+              reconkit --ai-show
+              reconkit --ai-set model=openrouter/free --ai-set endpoint_url=https://openrouter.ai/api/v1/chat/completions
+              reconkit --ai-set-file system_prompt=prompt.txt
               OPENROUTER_API_KEY=sk-or-... python3 recon.py example.com --ai
-              nano recon_config.json   # edit AI endpoint/model/system_prompt
               python3 recon.py --test-ai
               reconkit                                # opens interactive console
               reconkit example.com                    # direct one-shot scan
@@ -92,8 +95,12 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
     parser.add_argument("--ai", action="store_true", help="analyze scan results using recon_config.json AI settings")
     parser.add_argument("--ai-timeout", type=int, default=60, help="AI request timeout")
     parser.add_argument("--ai-out", type=Path, help="save AI analysis to file")
+    parser.add_argument("--ai-init", action="store_true", help="create/update recon_config.json with default AI settings")
+    parser.add_argument("--ai-show", action="store_true", help="show loaded AI config without exposing the full API key")
+    parser.add_argument("--ai-set", action="append", default=[], metavar="KEY=VALUE", help="set and save an AI config value, e.g. model=openrouter/free")
+    parser.add_argument("--ai-set-file", action="append", default=[], metavar="KEY=PATH", help="set and save an AI config value from a file, useful for system_prompt")
     parser.add_argument("--ai-prompt", action="store_true", help="print configured AI system prompt and exit")
-    parser.add_argument("--show-config", action="store_true", help="print loaded AI config without API key and exit")
+    parser.add_argument("--show-config", action="store_true", help="alias for --ai-show")
     parser.add_argument("--test-ai", action="store_true", help="test AI endpoint/model/API key without scanning")
     parser.add_argument("--version", action="store_true", help="show ReconKit version and Team CynetX links")
     return parser.parse_args(argv)
@@ -163,17 +170,25 @@ def main(argv: list[str] | None = None) -> int:
         return 0
     if args.install_deps:
         return install_deps(args.with_optional, args.dry_run, colorize=colorize)
-    if args.ai_prompt or args.show_config or args.test_ai:
+    ai_config_requested = bool(args.ai_init or args.ai_show or args.show_config or args.ai_set or args.ai_set_file or args.ai_prompt or args.test_ai)
+    if ai_config_requested:
         try:
             ai_config = load_config()
+            if args.ai_init or args.ai_set or args.ai_set_file:
+                ai_config = apply_ai_config_updates(ai_config, args.ai_set, args.ai_set_file)
+                validate_ai_config(ai_config)
+                save_config(ai_config)
+                print(color(f"[+] AI config saved: {CONFIG_PATH}", C.GREEN, colorize))
+                if not (args.ai_show or args.show_config or args.ai_prompt or args.test_ai):
+                    return 0
             validate_ai_config(ai_config)
-        except ValueError as exc:
-            print(color(f"Invalid config: {exc}", C.RED, colorize), file=sys.stderr)
+        except (ValueError, OSError) as exc:
+            print(color(f"Invalid AI config: {exc}", C.RED, colorize), file=sys.stderr)
             return 2
         if args.ai_prompt:
             print(str(ai_config["system_prompt"]))
             return 0
-        if args.show_config:
+        if args.ai_show or args.show_config:
             print(json.dumps(safe_config_for_display(ai_config), ensure_ascii=False, indent=2))
             return 0
         key = ai_api_key(ai_config)

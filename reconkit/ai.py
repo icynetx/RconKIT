@@ -27,6 +27,64 @@ def load_config(path: Path = CONFIG_PATH) -> dict[str, object]:
             config[key] = value
     return config
 
+
+def parse_ai_config_value(key: str, value: str) -> object:
+    if key not in DEFAULT_AI_CONFIG:
+        allowed = ", ".join(sorted(DEFAULT_AI_CONFIG))
+        raise ValueError(f"Unknown AI config key: {key}. Allowed keys: {allowed}")
+    default = DEFAULT_AI_CONFIG[key]
+    if isinstance(default, bool):
+        lowered = value.strip().lower()
+        if lowered in {"1", "true", "yes", "on"}:
+            return True
+        if lowered in {"0", "false", "no", "off"}:
+            return False
+        raise ValueError(f"AI config key {key} expects a boolean value")
+    if isinstance(default, int) and not isinstance(default, bool):
+        try:
+            return int(value)
+        except ValueError as exc:
+            raise ValueError(f"AI config key {key} expects an integer") from exc
+    if isinstance(default, float):
+        try:
+            return float(value)
+        except ValueError as exc:
+            raise ValueError(f"AI config key {key} expects a number") from exc
+    return value
+
+
+def apply_ai_config_updates(
+    config: dict[str, object],
+    assignments: list[str] | None = None,
+    file_assignments: list[str] | None = None,
+) -> dict[str, object]:
+    updated = dict(config)
+    for assignment in assignments or []:
+        if "=" not in assignment:
+            raise ValueError(f"Invalid --ai-set value: {assignment}. Use KEY=VALUE")
+        key, value = assignment.split("=", 1)
+        key = key.strip()
+        if not key:
+            raise ValueError("Invalid --ai-set value: key is empty")
+        updated[key] = parse_ai_config_value(key, value)
+    for assignment in file_assignments or []:
+        if "=" not in assignment:
+            raise ValueError(f"Invalid --ai-set-file value: {assignment}. Use KEY=PATH")
+        key, file_path = assignment.split("=", 1)
+        key = key.strip()
+        if key not in DEFAULT_AI_CONFIG:
+            allowed = ", ".join(sorted(DEFAULT_AI_CONFIG))
+            raise ValueError(f"Unknown AI config key: {key}. Allowed keys: {allowed}")
+        path = Path(file_path).expanduser()
+        updated[key] = path.read_text(encoding="utf-8").strip()
+    return updated
+
+
+def save_config(config: dict[str, object], path: Path = CONFIG_PATH) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    ordered = {key: config.get(key, DEFAULT_AI_CONFIG[key]) for key in DEFAULT_AI_CONFIG}
+    path.write_text(json.dumps({"ai": ordered}, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+
 def validate_ai_config(config: dict[str, object]) -> None:
     required = ("endpoint_url", "model", "system_prompt", "api_key_env")
     for key in required:

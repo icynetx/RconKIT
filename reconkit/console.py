@@ -32,6 +32,9 @@ HELP_ROWS = [
     ["show options", "Show current scan settings."],
     ["show modules", "Show module presets and examples."],
     ["show deps", "Check installed tools."],
+    ["show ai", "Show AI endpoint/model/config safely."],
+    ["ai set model openrouter/free", "Set and save an AI config value."],
+    ["ai set-file system_prompt prompt.txt", "Load a config value from a file."],
     ["set target example.com", "Set the target domain/IP/URL."],
     ["set mode fast|balanced|deep", "Choose nmap scan profile."],
     ["set modules safe|all|mission", "Choose extra ReconKit modules."],
@@ -211,6 +214,20 @@ def handle_command(line: str, state: ConsoleState, *, colorize: bool = True) -> 
             print(table(["Module", "What it runs"], MODULE_ROWS, colorize=colorize, max_widths=[16, 104]))
         elif command == "show" and rest[:1] in (["deps"], ["tools"]):
             print_dependencies(colorize=colorize)
+        elif command == "show" and rest[:1] == ["ai"]:
+            run_main(["--ai-show"])
+        elif command == "ai" and rest[:1] == ["init"]:
+            run_main(["--ai-init"])
+        elif command == "ai" and rest[:1] == ["prompt"]:
+            run_main(["--ai-prompt"])
+        elif command == "ai" and rest[:1] == ["show"]:
+            run_main(["--ai-show"])
+        elif command == "ai" and len(rest) >= 3 and rest[0] == "set":
+            key = rest[1]
+            value = " ".join(rest[2:])
+            run_main(["--ai-set", f"{key}={value}"])
+        elif command == "ai" and len(rest) == 3 and rest[0] in {"set-file", "file"}:
+            run_main(["--ai-set-file", f"{rest[1]}={rest[2]}"])
         elif command == "set" and len(rest) >= 2:
             key = rest[0]
             value = " ".join(rest[1:])
