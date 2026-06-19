@@ -96,6 +96,21 @@ GO_BOOTSTRAP_PACKAGES = {
     "winget": "GoLang.Go",
 }
 
+
+def windows_go_direct_command() -> list[str]:
+    script = (
+        "$ErrorActionPreference='Stop';"
+        "$items=Invoke-RestMethod 'https://go.dev/dl/?mode=json';"
+        "$file=$items | Where-Object { $_.stable -eq $true } | "
+        "ForEach-Object { $_.files } | Where-Object { $_.os -eq 'windows' -and $_.arch -eq 'amd64' -and $_.kind -eq 'installer' } | Select-Object -First 1;"
+        "if (-not $file) { throw 'No stable Go windows-amd64 installer found' };"
+        "$url='https://go.dev/dl/' + $file.filename;"
+        "$out=Join-Path $env:TEMP $file.filename;"
+        "Invoke-WebRequest -Uri $url -OutFile $out -UseBasicParsing;"
+        "Start-Process msiexec.exe -Wait -ArgumentList @('/i', $out, '/qn', '/norestart')"
+    )
+    return ["powershell", "-NoProfile", "-ExecutionPolicy", "Bypass", "-Command", script]
+
 MANUAL_HINTS = {
     "dig": "Install BIND tools. On Windows, prefer WSL/Kali or install BIND utilities manually.",
     "host": "Install BIND tools: bind9-host/dnsutils/bind-utils/bind.",
@@ -131,15 +146,58 @@ def detect_package_manager() -> str | None:
     return managers[0] if managers else None
 
 
+WINDOWS_ENV_LIMIT = 32767
+SAFE_PATH_LIMIT = 30000
+
+
+def split_path_entries(value: str) -> list[str]:
+    entries: list[str] = []
+    seen: set[str] = set()
+    for entry in value.split(os.pathsep):
+        clean = entry.strip().strip('"')
+        if not clean:
+            continue
+        key = clean.lower() if is_windows() else clean
+        if key in seen:
+            continue
+        seen.add(key)
+        entries.append(clean)
+    return entries
+
+
+def set_process_path(entries: list[str]) -> None:
+    selected: list[str] = []
+    total = 0
+    for entry in entries:
+        addition = len(entry) + (1 if selected else 0)
+        if total + addition > SAFE_PATH_LIMIT:
+            continue
+        selected.append(entry)
+        total += addition
+    try:
+        os.environ["PATH"] = os.pathsep.join(selected)
+    except ValueError:
+        os.environ["PATH"] = os.pathsep.join(selected[: max(1, len(selected) // 2)])
+
+
 def refresh_windows_path() -> None:
     if not is_windows():
         return
     try:
-        command = ["powershell", "-NoProfile", "-ExecutionPolicy", "Bypass", "-Command", "[Environment]::GetEnvironmentVariable('Path','Machine') + ';' + [Environment]::GetEnvironmentVariable('Path','User')"]
+        command = [
+            "powershell",
+            "-NoProfile",
+            "-ExecutionPolicy",
+            "Bypass",
+            "-Command",
+            "[Environment]::GetEnvironmentVariable('Path','Machine') + ';' + [Environment]::GetEnvironmentVariable('Path','User')",
+        ]
         result = subprocess.run(command, capture_output=True, text=True, check=False, timeout=10)
-        if result.stdout.strip():
-            os.environ["PATH"] = result.stdout.strip() + os.pathsep + os.environ.get("PATH", "")
-    except (OSError, subprocess.TimeoutExpired):
+        combined = result.stdout.strip()
+        if combined:
+            entries = split_path_entries(combined + os.pathsep + os.environ.get("PATH", ""))
+            set_process_path(entries)
+    except (OSError, subprocess.TimeoutExpired, ValueError):
         pass
 
 
@@ -239,7 +297,8 @@ def path_contains(directory: Path) -> bool:
 def add_to_current_path(directory: Path) -> None:
     directory_text = str(directory.expanduser())
     if not path_contains(directory):
-        os.environ["PATH"] = directory_text + os.pathsep + os.environ.get("PATH", "")
+        entries = [directory_text] + split_path_entries(os.environ.get("PATH", ""))
+        set_process_path(entries)
 
 
 def shell_path_block(directories: list[Path], fish: bool = False) -> str:
@@ -258,12 +317,10 @@ def persist_windows_user_path(directories: list[Path], *, colorize: bool = True)
     if not directories:
         return
     try:
-        existing = os.environ.get("PATH", "").split(os.pathsep)
-        for directory in directories:
-            text = str(directory.expanduser())
-            if text not in existing:
-                os.environ["PATH"] = os.environ.get("PATH", "") + os.pathsep + text
-        ps_dirs = ";".join(str(directory.expanduser()).replace("'", "''") for directory in directories)
+        current_entries = split_path_entries(os.environ.get("PATH", ""))
+        new_entries = [str(directory.expanduser()) for directory in directories]
+        set_process_path(current_entries + new_entries)
+        ps_dirs = ";".join(path.replace("'", "''") for path in new_entries)
         command = [
             "powershell",
             "-NoProfile",
@@ -275,11 +332,12 @@ def persist_windows_user_path(directories: list[Path], *, colorize: bool = True)
                 "$old = [Environment]::GetEnvironmentVariable('Path','User');"
                 "$parts = @(); if ($old) { $parts = $old -split ';' | Where-Object { $_ } };"
                 "foreach ($dir in $dirs) { if ($dir -and ($parts -notcontains $dir)) { $parts += $dir } };"
-                "[Environment]::SetEnvironmentVariable('Path', ($parts -join ';'), 'User')"
+                "$new = ($parts | Select-Object -Unique) -join ';';"
+                "if ($new.Length -lt 32000) { [Environment]::SetEnvironmentVariable('Path', $new, 'User') }"
             ),
         ]
         subprocess.run(command, check=False, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-        print(color("[+] Persisted tool directories to Windows User PATH.", C.GREEN, colorize))
+        print(color("[+] Added tool directories to this ReconKit run and Windows User PATH when safe.", C.GREEN, colorize))
         print(color("    Open a new PowerShell/CMD window if an external shell cannot see new tools yet.", C.DIM, colorize))
     except OSError:
         print(color("[!] Could not persist Windows User PATH automatically; current ReconKit run still knows these paths.", C.YELLOW, colorize))
@@ -411,14 +469,18 @@ def native_plan_for(tool: str, kind: str, managers: list[str]) -> InstallPlan | 
 def fallback_plan_for(tool: str, kind: str) -> InstallPlan | None:
     if tool in GO_INSTALLS:
         if command_exists("go"):
-            return InstallPlan(tool, kind, "go", ["go", "install", GO_INSTALLS[tool]], "Ensure GOPATH/bin or ~/go/bin is in PATH after install.")
+            return InstallPlan(tool, kind, "go", ["go", "install", GO_INSTALLS[tool]], "Installs the ProjectDiscovery/Go-based tool into ~/go/bin.")
+        if is_windows():
+            if command_exists("choco"):
+                return InstallPlan(tool, kind, "choco+go", install_one_command("choco", "golang"), "Installs Go first; ReconKit retries the Go tool after PATH refresh.")
+            return InstallPlan(tool, kind, "go-direct", windows_go_direct_command(), "Downloads the latest stable Go MSI directly from go.dev, then retries the Go tool.")
         managers = available_managers()
         for manager in managers:
             package = GO_BOOTSTRAP_PACKAGES.get(manager)
             if package:
                 command = install_one_command(manager, package)
                 if command:
-                    return InstallPlan(tool, kind, f"{manager}+go", command, "Installs Go first; re-run --install-deps --with-optional after Go is installed.")
+                    return InstallPlan(tool, kind, f"{manager}+go", command, "Installs Go first; ReconKit retries the Go tool after PATH refresh.")
     if tool in PIPX_INSTALLS and command_exists("pipx"):
         return InstallPlan(tool, kind, "pipx", ["pipx", "install", PIPX_INSTALLS[tool]])
     py_cmd = python_command()
@@ -473,7 +535,12 @@ def run_install_plan(plans: list[InstallPlan], *, colorize: bool = True) -> list
             if update.returncode != 0:
                 print(color(f"[!] Update failed for {plan.provider}; continuing best-effort.", C.YELLOW, colorize), file=sys.stderr)
         print(color(f"\n[*] Installing {plan.tool} via {plan.provider}...", C.CYAN, colorize))
-        result = subprocess.run(plan.command, check=False)
+        try:
+            result = subprocess.run(plan.command, check=False)
+        except OSError as exc:
+            print(color(f"[!] Could not launch installer for {plan.tool}: {exc}", C.YELLOW, colorize), file=sys.stderr)
+            failures.append(plan.tool)
+            continue
         refresh_windows_path()
         if result.returncode != 0:
             fallback = fallback_plan_for(plan.tool, plan.kind) if plan.provider not in {"go", "pipx", "pip"} else None
@@ -482,7 +549,11 @@ def run_install_plan(plans: list[InstallPlan], *, colorize: bool = True) -> list
                 if fallback.provider in {"pip", "pipx"} and is_windows():
                     bootstrap_windows_python(colorize=colorize)
                     fallback = fallback_plan_for(plan.tool, plan.kind) or fallback
-                fallback_result = subprocess.run(fallback.command, check=False)
+                try:
+                    fallback_result = subprocess.run(fallback.command, check=False)
+                except OSError as exc:
+                    print(color(f"[!] Could not launch fallback for {plan.tool}: {exc}", C.YELLOW, colorize), file=sys.stderr)
+                    fallback_result = subprocess.CompletedProcess(fallback.command, 1)
                 refresh_windows_path()
                 if fallback_result.returncode == 0:
                     continue
