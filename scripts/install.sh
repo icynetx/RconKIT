@@ -2,6 +2,7 @@
 set -eu
 
 REPO_URL="${RECONKIT_REPO_URL:-https://github.com/icynetx/RconKIT.git}"
+ZIP_URL="${RECONKIT_ZIP_URL:-https://github.com/icynetx/RconKIT/archive/refs/heads/main.zip}"
 INSTALL_DIR="${RECONKIT_HOME:-$HOME/.reconkit/src}"
 INSTALL_OPTIONAL="${RECONKIT_INSTALL_OPTIONAL:-1}"
 SKIP_TOOLS="${RECONKIT_SKIP_TOOLS:-0}"
@@ -35,19 +36,54 @@ say "[*] ReconKit installer by Team CynetX"
 say "[*] Website: https://cynetx.ir | Telegram: https://t.me/cynetx"
 
 ensure_command python3 python3 "Install Python 3 first, then rerun this command."
-ensure_command git git "Install git first, then rerun this command."
+if ! need git; then
+  say "[*] git not found; trying to install git automatically..."
+  bootstrap_package git || true
+fi
+
+fetch_zip() {
+  tmp_dir="$(mktemp -d 2>/dev/null || mktemp -d -t reconkit)"
+  zip_file="$tmp_dir/reconkit.zip"
+  say "[*] Downloading ReconKit ZIP fallback"
+  if need curl; then curl -fL --connect-timeout 30 --max-time 180 "$ZIP_URL" -o "$zip_file"; else ensure_command wget wget "Install curl or wget first."; wget -O "$zip_file" "$ZIP_URL"; fi
+  python3 - "$zip_file" "$INSTALL_DIR" <<'PYZIP'
+import shutil
+import sys
+import zipfile
+from pathlib import Path
+zip_file = Path(sys.argv[1])
+install_dir = Path(sys.argv[2])
+tmp_extract = zip_file.parent / "extract"
+if install_dir.exists():
+    shutil.rmtree(install_dir)
+tmp_extract.mkdir(parents=True, exist_ok=True)
+with zipfile.ZipFile(zip_file) as archive:
+    archive.extractall(tmp_extract)
+roots = [item for item in tmp_extract.iterdir() if item.is_dir()]
+if not roots:
+    raise SystemExit("ZIP archive did not contain a project directory")
+shutil.move(str(roots[0]), str(install_dir))
+PYZIP
+}
 
 mkdir -p "$(dirname "$INSTALL_DIR")"
 if [ -d "$INSTALL_DIR/.git" ]; then
   say "[*] Updating existing ReconKit checkout: $INSTALL_DIR"
-  git -C "$INSTALL_DIR" pull --ff-only
+  if ! git -C "$INSTALL_DIR" pull --ff-only; then
+    say "[!] git pull failed; keeping existing checkout and continuing"
+  fi
 elif [ -e "$INSTALL_DIR" ]; then
   say "[!] Install path exists but is not a git checkout: $INSTALL_DIR"
   say "    Set RECONKIT_HOME to another path or remove that directory."
   exit 1
 else
   say "[*] Cloning ReconKit into $INSTALL_DIR"
-  git clone "$REPO_URL" "$INSTALL_DIR"
+  if need git && git clone --depth 1 --single-branch "$REPO_URL" "$INSTALL_DIR"; then
+    say "[+] Clone completed"
+  else
+    say "[!] git clone failed or timed out; trying ZIP fallback"
+    fetch_zip
+  fi
 fi
 
 cd "$INSTALL_DIR"
