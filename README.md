@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="assets/reconkit-logo.jpg" alt="ReconKit" width="180">
+  <img src="assets/reconkit-logo.jpg" alt="ReconKit">
 </p>
 
 <h1 align="center">ReconKit ⚡</h1>
