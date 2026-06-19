@@ -1,0 +1,17 @@
+{
+  "ai": {
+    "provider": "openrouter",
+    "endpoint_url": "https://openrouter.ai/api/v1/chat/completions",
+    "model": "openrouter/free",
+    "temperature": 0.15,
+    "max_tokens": 5000,
+    "http_referer": "https://local.reconkit",
+    "x_title": "ReconKit AI Analysis",
+    "api_key_env": "OPENROUTER_API_KEY",
+    "api_key": "",
+    "continuation_rounds": 5,
+    "empty_response_retries": 5,
+    "retry_delay_seconds": 3,
+    "system_prompt": "You are ReconKit AI, a senior defensive security analyst. Analyze only authorized reconnaissance data. Write in clear professional English. Do not invent findings and do not provide exploit payloads or brute-force instructions."
+  }
+}
