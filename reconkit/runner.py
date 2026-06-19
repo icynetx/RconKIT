@@ -1,5 +1,4 @@
 import os
-import platform
 import shutil
 import subprocess
 import time
@@ -21,33 +20,15 @@ def go_bin_dirs() -> list[Path]:
     if os.environ.get("GOPATH"):
         dirs.append(Path(os.environ["GOPATH"]).expanduser() / "bin")
     dirs.append(Path.home() / "go" / "bin")
-    if os.environ.get("USERPROFILE"):
-        dirs.append(Path(os.environ["USERPROFILE"]) / "go" / "bin")
     return dirs
 
 
-def is_windows() -> bool:
-    return platform.system().lower().startswith("win")
-
-
 def executable_names(name: str) -> tuple[str, ...]:
-    if not is_windows() or Path(name).suffix:
-        return (name,)
-    return (name, f"{name}.exe", f"{name}.cmd", f"{name}.bat", f"{name}.ps1")
+    return (name,)
 
 
 def extra_tool_dirs() -> list[Path]:
-    dirs = go_bin_dirs()
-    if is_windows():
-        profile = Path(os.environ.get("USERPROFILE", str(Path.home())))
-        dirs.extend(
-            [
-                Path(os.environ.get("ProgramFiles", "C:/Program Files")) / "Go" / "bin",
-                profile / "AppData" / "Local" / "Microsoft" / "WindowsApps",
-                profile / ".reconkit" / "bin",
-            ]
-        )
-    return list(dict.fromkeys(dirs))
+    return list(dict.fromkeys(go_bin_dirs()))
 
 
 def which_tool(name: str) -> str | None:
@@ -58,7 +39,7 @@ def which_tool(name: str) -> str | None:
                 return found
             for directory in extra_tool_dirs():
                 candidate = directory / executable_name
-                if candidate.exists() and (is_windows() or os.access(candidate, os.X_OK)):
+                if candidate.exists() and os.access(candidate, os.X_OK):
                     return str(candidate)
     return None
 

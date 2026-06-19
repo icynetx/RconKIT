@@ -132,7 +132,7 @@ def render_switch_guide(*, colorize: bool = True) -> str:
         ["--explain", "Show this simple switch guide in the report."],
         ["--no-whois", "Skip WHOIS."],
         ["--check-deps", "Show installed/missing dependency status and exit."],
-        ["--install-deps", "Install tools best-effort using Linux/macOS/Windows package managers plus Go/Python fallbacks."],
+        ["--install-deps", "Install tools best-effort using Linux/macOS package managers plus Go/Python fallbacks."],
         ["--with-optional", "Also install optional web/TLS tools during dependency install."],
         ["--dry-run", "Print install commands without changing the system."],
         ["--ai", "Send scan summary to AI provider from recon_config.json."],

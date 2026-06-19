@@ -19,7 +19,7 @@
 
 <p align="center">
   <img alt="Python" src="https://img.shields.io/badge/Python-3.10+-3776AB?style=for-the-badge&logo=python&logoColor=white">
-  <img alt="Platform" src="https://img.shields.io/badge/Linux%20%7C%20macOS%20%7C%20Windows-supported-00c853?style=for-the-badge&logo=windows&logoColor=white">
+  <img alt="Platform" src="https://img.shields.io/badge/Linux%20%7C%20macOS-supported-00c853?style=for-the-badge&logo=linux&logoColor=white">
   <img alt="AI" src="https://img.shields.io/badge/OpenRouter-AI%20Analyst-7C3AED?style=for-the-badge&logo=openai&logoColor=white">
   <img alt="Safety" src="https://img.shields.io/badge/Authorized%20Recon-Only-ff9800?style=for-the-badge&logo=hackthebox&logoColor=white">
 </p>
@@ -47,7 +47,6 @@ It is built to feel simple on a fresh machine: run the one-command installer, le
 - 🧠 **AI analyst mode**: send normalized scan evidence to OpenRouter and get a clear defensive analysis in English.
 - 📊 **Reports without the mess**: export console output, JSON, Markdown, HTML, raw artifacts, and scan diffs.
 - 🧩 **Zero-to-ready installer**: installs ReconKit and automatically attempts to install its scanner tools with native package managers, Go, Python, and PATH setup.
-- 🪟 **Windows-aware**: installs through PowerShell, handles Python/Git/tool setup where possible, creates launchers, updates user PATH, and avoids raw ANSI setup output.
 - 🧼 **Human-readable output**: aligned tables, wrapped columns, quick-take notes, and practical next steps.
 
 ---
@@ -55,7 +54,7 @@ It is built to feel simple on a fresh machine: run the one-command installer, le
 ## 📸 Preview
 
 <p align="center">
-  <img src="assets/rnlinux.png" alt="ReconKit terminal preview">
+  <img src="rnlinux.png" alt="ReconKit terminal preview">
 </p>
 
 ReconKit keeps the terminal clean and readable: target summary, DNS intelligence, ports, web/TLS notes, extra tooling, reports, and AI analysis stay organized in one place.
@@ -70,15 +69,9 @@ Linux / macOS:
 curl -fsSL https://raw.githubusercontent.com/icynetx/RconKIT/main/scripts/install.sh | sh
 ```
 
-Windows PowerShell:
-
-```powershell
-iwr -useb https://raw.githubusercontent.com/icynetx/RconKIT/main/scripts/install.ps1 | iex
-```
-
 The installer downloads ReconKit, installs the `reconkit` command, tries to install the scan tools it uses, updates PATH where possible, and continues with clear notes if an optional tool is unavailable on your OS.
 
-> For the smoothest first test, use a fresh VPS or clean VM. Windows is supported and the PowerShell installer is designed to set up Git, Python, ReconKit, launchers, and available tools with minimal user interaction.
+> For the smoothest first test, use a fresh VPS or clean Linux VM so the automatic installer can prove the full setup from zero.
 
 ### 2) Open your recon console
 
@@ -177,24 +170,6 @@ If you want required tools only, without optional tools:
 curl -fsSL https://raw.githubusercontent.com/icynetx/RconKIT/main/scripts/install.sh | RECONKIT_INSTALL_OPTIONAL=0 sh
 ```
 
-### Windows PowerShell — one command
-
-```powershell
-iwr -useb https://raw.githubusercontent.com/icynetx/RconKIT/main/scripts/install.ps1 | iex
-```
-
-Command only, without external tools:
-
-```powershell
-$env:RECONKIT_SKIP_TOOLS="1"; iwr -useb https://raw.githubusercontent.com/icynetx/RconKIT/main/scripts/install.ps1 | iex
-```
-
-Required tools only:
-
-```powershell
-$env:RECONKIT_INSTALL_OPTIONAL="0"; iwr -useb https://raw.githubusercontent.com/icynetx/RconKIT/main/scripts/install.ps1 | iex
-```
-
 After installation, open a new terminal if needed:
 
 ```bash
@@ -203,7 +178,7 @@ reconkit --check-deps
 reconkit scanme.nmap.org -M safe --no-whois -t 90
 ```
 
-Recommended first test: run it on a fresh VPS/VM so the automatic installer can prove the full setup from zero. On Windows, run PowerShell as a normal user first; use Administrator only if your package manager requires it.
+Recommended first test: run it on a fresh VPS/VM so the automatic installer can prove the full setup from zero.
 
 ### Supported systems
 
@@ -214,9 +189,6 @@ Recommended first test: run it on a fresh VPS/VM so the automatic installer can 
 | Arch Linux | `curl -fsSL .../scripts/install.sh \| sh` |
 | Alpine Linux | `curl -fsSL .../scripts/install.sh \| sh` |
 | macOS | `curl -fsSL .../scripts/install.sh \| sh` |
-| Windows PowerShell | `iwr -useb .../scripts/install.ps1 \| iex` |
-
-> On Windows, `dig` and `host` are treated as optional because they are Unix/BIND-style tools. ReconKit uses a Python DNS fallback for basic A/AAAA resolution if they are missing.
 
 
 ## 📦 Automatic Tool Installer
@@ -230,7 +202,6 @@ ReconKit is meant to be beginner-friendly on a new system. It checks what is alr
 | Arch | `pacman` |
 | Alpine | `apk` |
 | macOS | `brew` |
-| Windows | `winget`, `choco` |
 | Cross-platform fallback | `go install`, `pipx`, `python -m pip --user` |
 
 Preview install commands:
@@ -343,7 +314,7 @@ reconkit example.com --mission
 | `--no-whois` | `--no-whois` | Skips WHOIS lookup. |
 | `--install-deps` | `--install-deps` | Installs required tools best-effort. |
 | `--self-install`, `--setup` | `--self-install --user` | Installs the `reconkit` command. |
-| `--user` | `--self-install --user` | Prefer user bin directory such as `~/.local/bin` or `%USERPROFILE%\.reconkit\bin`. |
+| `--user` | `--self-install --user` | Prefer user bin directory such as `~/.local/bin` . |
 | `--with-optional` | `--install-deps --with-optional` | Also install optional recon/web/TLS tools. |
 | `--dry-run` | `--install-deps --dry-run` | Print install plan without installing. |
 | `--check-deps` | `--check-deps` | Print dependency status and exit. |

@@ -86,7 +86,7 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
     parser.add_argument("--no-color", action="store_true", help="disable colors")
     parser.add_argument("--color", action="store_true", help="force ANSI colors")
     parser.add_argument("--no-whois", action="store_true", help="skip WHOIS")
-    parser.add_argument("--install-deps", action="store_true", help="install tools best-effort using apt/dnf/pacman/apk/brew/choco/winget/go/pipx")
+    parser.add_argument("--install-deps", action="store_true", help="install tools best-effort using apt/dnf/pacman/apk/brew/go/pipx")
     parser.add_argument("--self-install", "--setup", dest="self_install", action="store_true", help="install only the reconkit command into a system/user bin directory")
     parser.add_argument("--user", dest="user_install", action="store_true", help="with --self-install, prefer ~/.local/bin")
     parser.add_argument("--with-optional", action="store_true", help="with --install-deps, also install optional recon/web/TLS tools")
