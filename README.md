@@ -205,6 +205,12 @@ The fastest way is the one-command installer. It downloads ReconKit, installs th
 curl -fsSL https://raw.githubusercontent.com/icynetx/RconKIT/main/scripts/install.sh | sh
 ```
 
+If GitHub `git clone` is slow on your network, shorten the clone timeout so the installer quickly falls back to ZIP:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/icynetx/RconKIT/main/scripts/install.sh | RECONKIT_GIT_TIMEOUT=10 sh
+```
+
 If you only want the ReconKit command and do **not** want external tools installed automatically:
 
 ```bash
@@ -489,7 +495,7 @@ reconkit example.com --mission --raw-dir artifacts -o scan.json --markdown repor
 | Problem | Fix |
 |---|---|
 | `reconkit: command not found` | Run `python3 recon.py --self-install --user`, then open a new terminal. |
-| GitHub clone times out | Re-run the one-command installer; it now falls back to downloading the GitHub ZIP. You can also use a VPN/proxy if GitHub is blocked on your network. |
+| GitHub clone hangs or times out | Re-run with `RECONKIT_GIT_TIMEOUT=10` so it quickly falls back to ZIP: `curl -fsSL https://raw.githubusercontent.com/icynetx/RconKIT/main/scripts/install.sh | RECONKIT_GIT_TIMEOUT=10 sh`. Use VPN/proxy if GitHub itself is blocked. |
 | `Permission denied` from old launcher | Remove the broken old launcher earlier in `PATH`, then self-install again. |
 | `httpx` missing on Ubuntu | Run `reconkit --install-deps --with-optional`; ReconKit uses `go install` fallback. |
 | `amass` unavailable in `apt` | This is normal on many distros; ReconKit uses fallback/manual notes. |
