@@ -197,7 +197,7 @@ Run `reconkit` with no arguments and you get a guided console instead of a wall 
 
 ## 🛠️ Installation
 
-The fastest way is the one-command installer. It clones ReconKit, installs the `reconkit` command for your user, then installs available tools best-effort.
+The fastest way is the one-command installer. It downloads ReconKit, installs the `reconkit` command for your user, then installs available tools best-effort. The installer uses a shallow git clone first and automatically falls back to downloading the GitHub ZIP if clone is slow or blocked.
 
 ### Linux / macOS — one command
 
@@ -489,6 +489,7 @@ reconkit example.com --mission --raw-dir artifacts -o scan.json --markdown repor
 | Problem | Fix |
 |---|---|
 | `reconkit: command not found` | Run `python3 recon.py --self-install --user`, then open a new terminal. |
+| GitHub clone times out | Re-run the one-command installer; it now falls back to downloading the GitHub ZIP. You can also use a VPN/proxy if GitHub is blocked on your network. |
 | `Permission denied` from old launcher | Remove the broken old launcher earlier in `PATH`, then self-install again. |
 | `httpx` missing on Ubuntu | Run `reconkit --install-deps --with-optional`; ReconKit uses `go install` fallback. |
 | `amass` unavailable in `apt` | This is normal on many distros; ReconKit uses fallback/manual notes. |
