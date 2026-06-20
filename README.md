@@ -100,6 +100,10 @@ reconkit example.com --mission --raw-dir artifacts -o scan.json --markdown repor
 
 # Pick a clear scan preset instead of memorizing tool flags
 reconkit example.com --mission --scan-preset full
+
+# Build your own guided preset once, then reuse it
+reconkit --preset-create
+reconkit example.com --scan-preset mypreset --cmd
 ```
 
 ---
@@ -125,10 +129,12 @@ Run `reconkit` with no arguments and you get a guided console instead of a wall 
 | `set json scan.json` | Sets JSON output path. |
 | `set markdown report.md` | Sets Markdown output path. |
 | `set html report.html` | Sets HTML output path. |
+| `set extra --scan-preset mypreset --cmd` | Adds advanced CLI options to the next console run. |
 | `enable ai` / `disable ai` | Enables/disables AI analysis. |
 | `enable aggressive` | Enables heavier safe checks when tools exist. |
 | `enable no_whois` | Skips WHOIS. |
 | `enable show_commands` | Shows exact tool commands in output. |
+| `disable aggressive` | Turns off an enabled boolean option. |
 | `run` or `scan` | Runs the scan using current options. |
 | `quick example.com` | Runs a fast safe scan immediately. |
 | `mission example.com` | Runs the full mission workflow. |
@@ -182,6 +188,24 @@ reconkit scanme.nmap.org -M safe --no-whois -t 90
 ```
 
 Recommended first test: run it on a fresh VPS/VM so the automatic installer can prove the full setup from zero.
+
+### Manual install from source
+
+Use this if you already downloaded/cloned the repository or your network blocks the one-command installer:
+
+```bash
+cd RconKIT
+python3 recon.py --self-install --user
+reconkit --install-deps --with-optional
+reconkit --check-deps
+```
+
+For development or local testing without installing the command:
+
+```bash
+python3 recon.py --help
+python3 recon.py example.com -M safe --no-whois
+```
 
 ### Supported systems
 
@@ -312,28 +336,60 @@ reconkit example.com --templates --scan-preset vuln
 
 ### Custom Presets
 
-You can create your own preset once, give it a name, and reuse it with only the target + preset name. ReconKit asks for extra arguments tool by tool and stores them in `recon_presets.json`.
+Custom presets are for operators who want one clean command instead of retyping tool flags. Create a preset once, save tool-specific arguments, then run it later with only a target and `--scan-preset`. Presets are stored in `recon_presets.json`.
 
-Interactive builder:
+#### Interactive wizard
+
+Run this and ReconKit asks for everything step by step: preset name, base preset, mode, then custom args for each tool. Leave a tool blank to skip it.
 
 ```bash
-reconkit --preset-create corpfull --preset-base full
+reconkit --preset-create
 ```
 
-Non-interactive builder:
+You can also provide the name first and let the wizard ask the rest:
 
 ```bash
-reconkit --preset-create corpfull --preset-base full --preset-desc "Corp full scan" \
+reconkit --preset-create corpfull
+```
+
+#### Preset modes
+
+| Mode | Behavior | Best use |
+|---|---|---|
+| `append` | Keeps ReconKit defaults and adds your args. | Small additions like headers, tags, or `--reason`. |
+| `replace` | For configured tools, uses your args instead of ReconKit defaults. Other tools still use normal behavior. | You want custom nmap/httpx/nuclei style but keep the full workflow. |
+| `only` | Runs only tools configured inside the preset; unconfigured tools are skipped. | You want a preset to fully control what runs. |
+
+#### Non-interactive builder
+
+```bash
+reconkit --preset-create corpfull --preset-base full --preset-strategy append --preset-desc "Corp full scan" \
   --preset-add 'nmap=--reason' \
   --preset-add 'httpx=-H "X-ROE-ID: ACME-2026"' \
   --preset-add 'nuclei=-tags cves'
 ```
 
-Use it later:
+#### Preset-only workflow
+
+Use `only` when you want ReconKit to run just the tools you configured. Placeholders are replaced at runtime.
 
 ```bash
-reconkit example.com --mission --scan-preset corpfull
+reconkit --preset-create myweb --preset-strategy only \
+  --preset-add 'nmap=-sV -Pn -p 80,443 -oN - {target}' \
+  --preset-add 'httpx=-silent -title -status-code -u {url}' \
+  --preset-add 'nuclei=-silent -tags cves -u {url}'
+
+reconkit example.com --scan-preset myweb --cmd
 ```
+
+Useful placeholders:
+
+| Placeholder | Replaced with |
+|---|---|
+| `{target}` | Normalized target domain/IP. |
+| `{domain}` | Same domain-style target value. |
+| `{url}` | First detected web URL for web tools. |
+| `{out_dir}` | Artifact directory for tools like `gowitness`. |
 
 Manage presets:
 
@@ -374,14 +430,16 @@ Supported custom-argument tools:
 | `--scan-preset` | `--scan-preset corpfull` | Built-in or saved custom scan preset. |
 | `--preset-list` | `--preset-list` | List built-in and saved presets. |
 | `--preset-show` | `--preset-show corpfull` | Show a saved preset. |
-| `--preset-create` | `--preset-create corpfull` | Create a custom preset interactively. |
+| `--preset-create` | `--preset-create` or `--preset-create corpfull` | Create a custom preset interactively. |
 | `--preset-base` | `--preset-base full` | Base preset for a custom preset. |
+| `--preset-strategy` | `--preset-strategy only` | Custom preset behavior: `append`, `replace`, or `only`. |
 | `--preset-add` | `--preset-add 'nmap=--reason'` | Add tool-specific args non-interactively. Repeatable. |
 | `--preset-desc` | `--preset-desc "Corp scan"` | Description for a custom preset. |
 | `--preset-delete` | `--preset-delete corpfull` | Delete a saved custom preset. |
 | `--cmd`, `--show-commands` | `--cmd` | Shows exact commands ReconKit executed. |
 | `--explain` | `--explain` | Shows a switch guide in the scan output. |
 | `--no-color` | `--no-color` | Disables ANSI colors. Useful for CI/log files. |
+| `--color` | `--color` | Forces ANSI colors even when auto-detection would disable them. |
 | `--no-whois` | `--no-whois` | Skips WHOIS lookup. |
 | `--install-deps` | `--install-deps` | Installs required tools best-effort. |
 | `--self-install`, `--setup` | `--self-install --user` | Installs the `reconkit` command. |
@@ -426,7 +484,7 @@ reconkit --ai-set endpoint_url=https://openrouter.ai/api/v1/chat/completions
 reconkit --ai-set model=openrouter/free
 ```
 
-Set API key using an environment variable name, or save a direct key if you prefer local-only config:
+Set API key using an environment variable name. Direct local config is also supported, but do not commit real keys to GitHub:
 
 ```bash
 reconkit --ai-set api_key_env=OPENROUTER_API_KEY
@@ -509,6 +567,20 @@ A complete report workflow can look like this:
 ```bash
 reconkit example.com --mission --raw-dir artifacts -o scan.json --markdown report.md --html report.html --ai --ai-out ai-report.md -t 120
 ```
+
+
+---
+
+## 🧯 Troubleshooting
+
+| Problem | Fix |
+|---|---|
+| `reconkit: command not found` | Open a new terminal, then run `echo $PATH`. User installs usually place the command in `~/.local/bin`. |
+| GitHub clone is very slow | Use `RECONKIT_GIT_TIMEOUT=10` with the install command so it falls back to ZIP faster. |
+| Optional tools are missing | Run `reconkit --install-deps --with-optional`, then `reconkit --check-deps`. Some optional tools depend on OS package availability. |
+| AI test returns empty/free-model issues | Try `reconkit --test-ai`, increase retries with `--ai-set empty_response_retries=5`, or choose a more stable OpenRouter model. |
+| Output has ANSI codes in logs | Add `--no-color`. |
+| Need exact executed commands | Add `--cmd` / `--show-commands`. |
 
 ---
 
