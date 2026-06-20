@@ -98,7 +98,7 @@
 ## ‏پیش‌نمایش
 
 <p align="center">
-  <img src="rnlinux.png" alt="ReconKit terminal preview">
+  <img src="assets/rnlinux.png" alt="ReconKit terminal preview">
 </p>
 
 ‏ReconKit خروجی اسکن را به شکل منظم نشان می‌دهد: خلاصه هدف، DNS، پورت‌ها، سرویس‌ها، ابزارهای جانبی، notes، گزارش‌ها و تحلیل AI در یک نمای خوانا کنار هم قرار می‌گیرند.
