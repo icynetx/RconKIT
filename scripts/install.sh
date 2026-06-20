@@ -12,6 +12,28 @@ say() { printf '%s\n' "$*"; }
 need() { command -v "$1" >/dev/null 2>&1; }
 sudo_cmd() { if [ "$(id -u 2>/dev/null || echo 1)" = "0" ]; then "$@"; elif need sudo; then sudo "$@"; else return 1; fi; }
 
+run_quiet() {
+  if [ "${RECONKIT_VERBOSE:-0}" = "1" ]; then
+    "$@"
+    return $?
+  fi
+  tmp_log="${TMPDIR:-/tmp}/reconkit-install-$$.log"
+  set +e
+  "$@" >"$tmp_log" 2>&1
+  status=$?
+  set -e
+  if [ "$status" -eq 0 ]; then
+    rm -f "$tmp_log"
+    return 0
+  fi
+  say "[!] Command failed: $*"
+  if [ -s "$tmp_log" ]; then
+    tail -n 20 "$tmp_log" 2>/dev/null || cat "$tmp_log"
+  fi
+  rm -f "$tmp_log"
+  return "$status"
+}
+
 bootstrap_package() {
   pkg="$1"
   if need apt; then run_quiet sudo_cmd apt update && run_quiet sudo_cmd apt install -y "$pkg" && return 0; fi
