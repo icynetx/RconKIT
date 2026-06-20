@@ -6,6 +6,7 @@ from pathlib import Path
 from .constants import PRESETS_PATH
 
 BUILTIN_PRESET_NAMES = ("quick", "standard", "full", "web", "vuln")
+PRESET_STRATEGIES = ("append", "replace", "only")
 PRESET_TOOLS = (
     "nmap", "dig", "host", "nslookup", "whois", "whatweb", "httpx", "wafw00f", "nikto",
     "sslscan", "testssl.sh", "subfinder", "amass", "curl", "katana", "gowitness", "nuclei",
@@ -97,18 +98,28 @@ def preset_tool_args(name: str, tool: str) -> list[str]:
     return [str(item) for item in args]
 
 
-def create_preset(name: str, base: str, tool_args: dict[str, list[str] | str], description: str = "") -> dict[str, object]:
+def preset_strategy(name: str) -> str:
+    preset = get_custom_preset(name)
+    if not preset:
+        return "append"
+    strategy = str(preset.get("strategy", "append")).strip().lower()
+    return strategy if strategy in PRESET_STRATEGIES else "append"
+
+
+def create_preset(name: str, base: str, tool_args: dict[str, list[str] | str], description: str = "", strategy: str = "append") -> dict[str, object]:
     clean = validate_preset_name(name)
     if clean in BUILTIN_PRESET_NAMES:
         raise ValueError(f"Cannot overwrite built-in preset: {clean}")
     if base not in BUILTIN_PRESET_NAMES:
         raise ValueError(f"Base preset must be one of: {', '.join(BUILTIN_PRESET_NAMES)}")
+    if strategy not in PRESET_STRATEGIES:
+        raise ValueError(f"Preset strategy must be one of: {', '.join(PRESET_STRATEGIES)}")
     normalized = normalize_tool_args(tool_args)
     data = load_presets()
     presets = data.setdefault("presets", {})
     if not isinstance(presets, dict):
         raise ValueError("Invalid preset storage")
-    presets[clean] = {"base": base, "description": description.strip(), "tool_args": normalized}
+    presets[clean] = {"base": base, "strategy": strategy, "description": description.strip(), "tool_args": normalized}
     save_presets(data)
     return presets[clean]
 
@@ -127,23 +138,32 @@ def delete_preset(name: str) -> bool:
 
 
 def list_preset_rows() -> list[list[str]]:
-    rows = [[name, "built-in", name, "ReconKit built-in scan preset"] for name in BUILTIN_PRESET_NAMES]
+    rows = [[name, "built-in", name, "append", "ReconKit built-in scan preset"] for name in BUILTIN_PRESET_NAMES]
     data = load_presets()
     presets = data.get("presets", {})
     if isinstance(presets, dict):
         for name, preset in sorted(presets.items()):
             if isinstance(preset, dict):
-                rows.append([name, "custom", str(preset.get("base", "standard")), str(preset.get("description", ""))])
+                strategy = str(preset.get("strategy", "append"))
+                if strategy not in PRESET_STRATEGIES:
+                    strategy = "append"
+                rows.append([name, "custom", str(preset.get("base", "standard")), strategy, str(preset.get("description", ""))])
     return rows
 
 
-def prompt_create_preset(name: str, base: str = "standard") -> dict[str, object]:
+def prompt_create_preset(name: str, base: str = "standard", strategy: str = "append") -> dict[str, object]:
     print(f"[+] Creating preset: {name}")
     print(f"[*] Base preset: {base}")
     description = input("Description (optional): ").strip()
+    raw_strategy = input(f"Mode append/replace/only [{strategy}]: ").strip().lower()
+    if raw_strategy:
+        strategy = raw_strategy
+    if strategy not in PRESET_STRATEGIES:
+        raise ValueError(f"Preset strategy must be one of: {', '.join(PRESET_STRATEGIES)}")
     print("\nEnter extra arguments for each tool. Leave blank to skip.")
     print("Example: nmap => --reason --top-ports 1000")
-    print("Tip: arguments are appended to ReconKit's safe default command for that tool.\n")
+    print("Tip: append adds to defaults; replace uses your args for configured tools; only skips tools not configured in the preset.")
+    print("Tip: in replace mode you can use placeholders: {target}, {url}, {domain}, {out_dir}\n")
     tool_args: dict[str, list[str]] = {}
     for tool in PRESET_TOOLS:
         while True:
@@ -156,4 +176,4 @@ def prompt_create_preset(name: str, base: str = "standard") -> dict[str, object]
                 print(f"[!] {exc}")
         if args:
             tool_args[tool] = args
-    return create_preset(name, base, tool_args, description)
+    return create_preset(name, base, tool_args, description, strategy)

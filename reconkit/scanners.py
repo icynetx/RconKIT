@@ -6,7 +6,7 @@ from pathlib import Path
 from .constants import DEFAULT_RECORDS, FAST_PORTS, NMAP_TIMING_ARGS, PROFILE_PORTS, WEB_FALLBACK_PORTS, WEB_PORTS, WEB_SERVICES
 from .models import CmdResult, ExtraResult, ReconReport
 from .parsers import first_lines, parse_dig_answer, parse_nmap, summarize_host, summarize_nikto, summarize_nslookup, summarize_wafw00f, summarize_whatweb, whois_summary
-from .presets import preset_base, preset_tool_args
+from .presets import preset_base, preset_strategy, preset_tool_args
 from .runner import run_cmd, which_tool
 from .target import is_ip, target_has_scan_endpoint
 
@@ -91,6 +91,43 @@ def custom_args(preset: str, tool: str) -> list[str]:
     return preset_tool_args(preset, tool)
 
 
+def preset_only(preset: str) -> bool:
+    return preset_strategy(preset) == "only"
+
+
+def replace_args(preset: str, tool: str) -> list[str]:
+    args = custom_args(preset, tool)
+    return args if preset_strategy(preset) in {"replace", "only"} and args else []
+
+
+def with_placeholders(args: list[str], *, target: str | None = None, url: str | None = None, domain: str | None = None, out_dir: str | None = None) -> list[str]:
+    replacements = {
+        "{target}": target or "",
+        "{url}": url or "",
+        "{domain}": domain or target or "",
+        "{out_dir}": out_dir or "",
+    }
+    rendered = []
+    for arg in args:
+        value = arg
+        for key, replacement in replacements.items():
+            value = value.replace(key, replacement)
+        rendered.append(value)
+    return rendered
+
+
+def command_from_preset(binary: str, args: list[str], fallback_target: str, placeholder: str = "{target}") -> list[str]:
+    rendered = with_placeholders(args, target=fallback_target, url=fallback_target, domain=fallback_target)
+    placeholders = ("{target}", "{url}", "{domain}", "{out_dir}", placeholder)
+    if not any(any(token in arg for token in placeholders) for arg in args):
+        rendered.append(fallback_target)
+    return [binary, *rendered]
+
+
+def has_flag(args: list[str], *flags: str) -> bool:
+    return any(arg in flags or any(arg.startswith(flag + "=") for flag in flags if flag.startswith("--")) for arg in args)
+
+
 def python_dns_fallback(target: str, report: ReconReport) -> None:
     try:
         infos = socket.getaddrinfo(target, None, socket.AF_INET, socket.SOCK_STREAM)
@@ -132,19 +169,41 @@ def scan_dns_tools(target: str, timeout: int, report: ReconReport, preset: str =
     if is_ip(target):
         return
     dns_timeout = max(5, min(timeout, 12))
-    if which_tool("host"):
-        host_result = run_cmd(["host", "-a", target, *custom_args(preset, "host")], dns_timeout)
+    if preset_only(preset) and not custom_args(preset, "host"):
+        pass
+    elif which_tool("host"):
+        host_replace = replace_args(preset, "host")
+        host_cmd = command_from_preset("host", host_replace, target) if host_replace else ["host", "-a", target, *custom_args(preset, "host")]
+        host_result = run_cmd(host_cmd, dns_timeout)
         add_extra(report, "DNS Tools", "host", host_result, summarize_host(host_result.stdout))
     else:
         add_extra(report, "DNS Tools", "host", CmdResult(["host"], False, missing=True, stderr="host not found"), [])
-    if which_tool("nslookup"):
-        ns_result = run_cmd(["nslookup", "-type=any", target, *custom_args(preset, "nslookup")], dns_timeout)
+    if preset_only(preset) and not custom_args(preset, "nslookup"):
+        pass
+    elif which_tool("nslookup"):
+        ns_replace = replace_args(preset, "nslookup")
+        ns_cmd = command_from_preset("nslookup", ns_replace, target) if ns_replace else ["nslookup", "-type=any", target, *custom_args(preset, "nslookup")]
+        ns_result = run_cmd(ns_cmd, dns_timeout)
         add_extra(report, "DNS Tools", "nslookup", ns_result, summarize_nslookup(ns_result.stdout, ns_result.stderr))
     else:
         add_extra(report, "DNS Tools", "nslookup", CmdResult(["nslookup"], False, missing=True, stderr="nslookup not found"), [])
 
 def scan_nmap(target: str, timeout: int, report: ReconReport, ports: str | None, deep: bool, preset: str = "standard") -> None:
     effective_timeout = max(10, timeout)
+    nmap_replace = replace_args(preset, "nmap")
+    if preset_only(preset) and not nmap_replace:
+        report.notes.append("nmap skipped because scan preset mode is only and nmap has no preset args.")
+        return
+    if nmap_replace:
+        result = run_cmd(command_from_preset("nmap", nmap_replace, target), effective_timeout)
+        report.commands.append(command_record(result))
+        if result.missing:
+            report.notes.append("nmap is not installed; port scan skipped.")
+            return
+        report.nmap_ports = parse_nmap(result.stdout)
+        if not report.nmap_ports and result.stderr:
+            report.notes.append(f"custom nmap preset note: {result.stderr[:180]}")
+        return
     if deep:
         args = ["nmap", "-n", "-oN", "-", "-sV", "-sC", "-Pn"]
         if ports:
@@ -216,8 +275,12 @@ def scan_nmap(target: str, timeout: int, report: ReconReport, ports: str | None,
     if service.stderr:
         report.notes.append(f"nmap service note: {service.stderr[:180]}")
 
-def scan_whois(target: str, timeout: int, report: ReconReport) -> None:
-    result = run_cmd(["whois", target], timeout)
+def scan_whois(target: str, timeout: int, report: ReconReport, preset: str = "standard") -> None:
+    if preset_only(preset) and not custom_args(preset, "whois"):
+        report.notes.append("WHOIS skipped because scan preset mode is only and whois has no preset args.")
+        return
+    whois_replace = replace_args(preset, "whois")
+    result = run_cmd(command_from_preset("whois", whois_replace, target) if whois_replace else ["whois", target, *custom_args(preset, "whois")], timeout)
     report.commands.append(command_record(result))
     if result.missing:
         report.notes.append("whois is not installed; WHOIS summary skipped.")
@@ -247,27 +310,56 @@ def scan_web_stack(report: ReconReport, timeout: int, aggressive: bool, preset: 
         report.notes.append("No web-looking ports found; web tooling skipped.")
         return
 
-    if which_tool("whatweb"):
-        result = run_cmd(["whatweb", "--color=never", "--no-errors", "--log-brief=-", *custom_args(preset, "whatweb"), *urls[:6]], timeout)
+    if preset_only(preset) and not custom_args(preset, "whatweb"):
+        pass
+    elif which_tool("whatweb"):
+        whatweb_replace = replace_args(preset, "whatweb")
+        whatweb_cmd = ["whatweb", *with_placeholders(whatweb_replace, url=urls[0], target=report.normalized_target, domain=report.normalized_target)]
+        if whatweb_replace and not any("{url}" in arg or "{target}" in arg or "{domain}" in arg for arg in whatweb_replace):
+            whatweb_cmd.extend(urls[:6])
+        if not whatweb_replace:
+            whatweb_cmd = ["whatweb", "--color=never", "--no-errors", "--log-brief=-", *custom_args(preset, "whatweb"), *urls[:6]]
+        result = run_cmd(whatweb_cmd, timeout)
         add_extra(report, "Web Fingerprint", "whatweb", result, summarize_whatweb(result.stdout))
     else:
         add_extra(report, "Web Fingerprint", "whatweb", CmdResult(["whatweb"], False, missing=True, stderr="whatweb not found"), [])
 
     httpx_bin = which_tool("httpx") or which_tool("httpx-toolkit")
-    if httpx_bin:
-        result = run_cmd([httpx_bin, "-silent", "-title", "-tech-detect", "-status-code", *httpx_preset_args(preset), *custom_args(preset, "httpx"), "-u", urls[0]], timeout)
+    if preset_only(preset) and not custom_args(preset, "httpx"):
+        pass
+    elif httpx_bin:
+        httpx_replace = replace_args(preset, "httpx")
+        if httpx_replace:
+            rendered = with_placeholders(httpx_replace, url=urls[0], target=report.normalized_target, domain=report.normalized_target)
+            if not any("{url}" in arg or "{target}" in arg or "{domain}" in arg for arg in httpx_replace) and not has_flag(rendered, "-u", "-l"):
+                rendered.extend(["-u", urls[0]])
+            result = run_cmd([httpx_bin, *rendered], timeout)
+        else:
+            result = run_cmd([httpx_bin, "-silent", "-title", "-tech-detect", "-status-code", *httpx_preset_args(preset), *custom_args(preset, "httpx"), "-u", urls[0]], timeout)
         add_extra(report, "HTTP Probe", Path(httpx_bin).name, result, first_lines(result.stdout, 8))
     else:
         add_extra(report, "HTTP Probe", "httpx", CmdResult(["httpx"], False, missing=True, stderr="httpx not found"), [])
 
-    if which_tool("wafw00f"):
-        result = run_cmd(["wafw00f", "-a", urls[0], *custom_args(preset, "wafw00f")], timeout)
+    if preset_only(preset) and not custom_args(preset, "wafw00f"):
+        pass
+    elif which_tool("wafw00f"):
+        wafw00f_replace = replace_args(preset, "wafw00f")
+        result = run_cmd(command_from_preset("wafw00f", waf_replace, urls[0], "{url}") if waf_replace else ["wafw00f", "-a", urls[0], *custom_args(preset, "wafw00f")], timeout)
         add_extra(report, "WAF Check", "wafw00f", result, summarize_wafw00f(result.stdout))
     else:
         add_extra(report, "WAF Check", "wafw00f", CmdResult(["wafw00f"], False, missing=True, stderr="wafw00f not found"), [])
 
-    if aggressive and which_tool("nikto"):
-        result = run_cmd(["nikto", "-nointeractive", "-Tuning", "x", "-host", urls[0], *custom_args(preset, "nikto")], timeout)
+    if preset_only(preset) and not custom_args(preset, "nikto"):
+        pass
+    elif aggressive and which_tool("nikto"):
+        nikto_replace = replace_args(preset, "nikto")
+        if nikto_replace:
+            rendered = with_placeholders(nikto_replace, url=urls[0], target=report.normalized_target, domain=report.normalized_target)
+            if not any("{url}" in arg or "{target}" in arg or "{domain}" in arg for arg in nikto_replace) and not has_flag(rendered, "-host", "-h"):
+                rendered.extend(["-host", urls[0]])
+            result = run_cmd(["nikto", *rendered], timeout)
+        else:
+            result = run_cmd(["nikto", "-nointeractive", "-Tuning", "x", "-host", urls[0], *custom_args(preset, "nikto")], timeout)
         add_extra(report, "Web Baseline", "nikto", result, summarize_nikto(result.stdout))
     elif aggressive:
         add_extra(report, "Web Baseline", "nikto", CmdResult(["nikto"], False, missing=True, stderr="nikto not found"), [])
@@ -283,12 +375,18 @@ def scan_tls(report: ReconReport, timeout: int, aggressive: bool, preset: str = 
     if not tls_targets:
         return
 
-    if which_tool("sslscan"):
-        result = run_cmd(["sslscan", "--no-colour", *custom_args(preset, "sslscan"), tls_targets[0]], timeout)
+    if preset_only(preset) and not custom_args(preset, "sslscan"):
+        pass
+    elif which_tool("sslscan"):
+        sslscan_replace = replace_args(preset, "sslscan")
+        result = run_cmd(command_from_preset("sslscan", sslscan_replace, tls_targets[0]) if sslscan_replace else ["sslscan", "--no-colour", *custom_args(preset, "sslscan"), tls_targets[0]], timeout)
         interesting = [line.strip() for line in result.stdout.splitlines() if any(token in line for token in ("SSLv", "TLSv", "Subject:", "Issuer:", "Signature Algorithm", "not vulnerable"))]
         add_extra(report, "TLS Check", "sslscan", result, list(dict.fromkeys(interesting))[:8])
+    elif preset_only(preset) and not custom_args(preset, "testssl.sh"):
+        pass
     elif which_tool("testssl.sh") and aggressive:
-        result = run_cmd(["testssl.sh", "--fast", "--warnings", "batch", *custom_args(preset, "testssl.sh"), tls_targets[0]], timeout)
+        testssl_replace = replace_args(preset, "testssl.sh")
+        result = run_cmd(command_from_preset("testssl.sh", testssl_replace, tls_targets[0]) if testssl_replace else ["testssl.sh", "--fast", "--warnings", "batch", *custom_args(preset, "testssl.sh"), tls_targets[0]], timeout)
         add_extra(report, "TLS Check", "testssl.sh", result, first_lines(result.stdout, 12))
     else:
         report.notes.append("sslscan not installed; TLS detail skipped.")
@@ -360,15 +458,33 @@ def scan_passive(report: ReconReport, timeout: int, raw_dir: Path | None = None,
     if is_ip(report.normalized_target):
         report.notes.append("Passive subdomain discovery skipped because target is an IP address.")
         return
-    if which_tool("subfinder"):
-        result = run_cmd(["subfinder", "-silent", "-d", report.normalized_target, *custom_args(preset, "subfinder")], timeout)
+    if preset_only(preset) and not custom_args(preset, "subfinder"):
+        pass
+    elif which_tool("subfinder"):
+        subfinder_replace = replace_args(preset, "subfinder")
+        if subfinder_replace:
+            rendered = with_placeholders(subfinder_replace, target=report.normalized_target, domain=report.normalized_target)
+            if not any("{target}" in arg or "{domain}" in arg for arg in subfinder_replace) and not has_flag(rendered, "-d"):
+                rendered.extend(["-d", report.normalized_target])
+            result = run_cmd(["subfinder", *rendered], timeout)
+        else:
+            result = run_cmd(["subfinder", "-silent", "-d", report.normalized_target, *custom_args(preset, "subfinder")], timeout)
         save_artifact(report, raw_dir, "subfinder.txt", result.stdout)
         add_extra(report, "Passive Discovery", "subfinder", result, first_lines(result.stdout, 12))
     else:
         add_extra(report, "Passive Discovery", "subfinder", CmdResult(["subfinder"], False, missing=True, stderr="subfinder not found"), [])
 
-    if which_tool("amass"):
-        result = run_cmd(["amass", "enum", "-passive", "-norecursive", "-d", report.normalized_target, *custom_args(preset, "amass")], timeout)
+    if preset_only(preset) and not custom_args(preset, "amass"):
+        pass
+    elif which_tool("amass"):
+        amass_replace = replace_args(preset, "amass")
+        if amass_replace:
+            rendered = with_placeholders(amass_replace, target=report.normalized_target, domain=report.normalized_target)
+            if not any("{target}" in arg or "{domain}" in arg for arg in amass_replace) and not has_flag(rendered, "-d"):
+                rendered.extend(["-d", report.normalized_target])
+            result = run_cmd(["amass", *rendered], timeout)
+        else:
+            result = run_cmd(["amass", "enum", "-passive", "-norecursive", "-d", report.normalized_target, *custom_args(preset, "amass")], timeout)
         save_artifact(report, raw_dir, "amass-passive.txt", result.stdout)
         add_extra(report, "Passive Discovery", "amass", result, first_lines(result.stdout, 12))
     else:
@@ -378,8 +494,12 @@ def scan_passive(report: ReconReport, timeout: int, raw_dir: Path | None = None,
 def scan_dns_deep(report: ReconReport, timeout: int, raw_dir: Path | None = None, preset: str = "standard") -> None:
     if is_ip(report.normalized_target):
         return
+    if preset_only(preset) and not custom_args(preset, "dig"):
+        report.notes.append("DNS deep skipped because scan preset mode is only and dig has no preset args.")
+        return
     resolver = report.resolved_ips[0] if report.resolved_ips else report.normalized_target
-    axfr = run_cmd(["dig", "axfr", f"@{resolver}", report.normalized_target, *custom_args(preset, "dig")], min(timeout, 20))
+    dig_replace = replace_args(preset, "dig")
+    axfr = run_cmd(command_from_preset("dig", dig_replace, report.normalized_target) if dig_replace else ["dig", "axfr", f"@{resolver}", report.normalized_target, *custom_args(preset, "dig")], min(timeout, 20))
     save_artifact(report, raw_dir, "dig-axfr.txt", axfr.stdout or axfr.stderr)
     summary = first_lines(axfr.stdout or axfr.stderr, 8)
     if axfr.ok and "Transfer failed" not in axfr.stdout and "failed" not in axfr.stdout.lower() and len(axfr.stdout.splitlines()) > 3:
@@ -393,17 +513,29 @@ def scan_http_detail(report: ReconReport, timeout: int, raw_dir: Path | None = N
         report.notes.append("HTTP detail skipped because no web URL was identified.")
         return
     for index, url in enumerate(urls[:4], 1):
+        if preset_only(preset) and not custom_args(preset, "curl"):
+            continue
         if which_tool("curl"):
             curl_timeout = min(timeout, int(preset_config(preset).get("http_timeout", 20)))
-            result = run_cmd(["curl", "-k", "-L", "-I", "--max-time", str(curl_timeout), *curl_preset_args(preset), *custom_args(preset, "curl"), url], min(timeout, 25))
+            curl_replace = replace_args(preset, "curl")
+            result = run_cmd(command_from_preset("curl", curl_replace, url, "{url}") if curl_replace else ["curl", "-k", "-L", "-I", "--max-time", str(curl_timeout), *curl_preset_args(preset), *custom_args(preset, "curl"), url], min(timeout, 25))
             save_artifact(report, raw_dir, f"curl-headers-{index}.txt", result.stdout or result.stderr)
             headers = [line.strip() for line in result.stdout.splitlines() if ":" in line][:10]
             add_extra(report, "HTTP Headers", "curl", result, headers or first_lines(result.stdout or result.stderr, 8))
         else:
             add_extra(report, "HTTP Headers", "curl", CmdResult(["curl"], False, missing=True, stderr="curl not found"), [])
             break
-    if which_tool("katana"):
-        result = run_cmd(["katana", "-silent", "-no-color", *katana_preset_args(preset), *custom_args(preset, "katana"), "-u", urls[0]], min(timeout, 45))
+    if preset_only(preset) and not custom_args(preset, "katana"):
+        pass
+    elif which_tool("katana"):
+        katana_replace = replace_args(preset, "katana")
+        if katana_replace:
+            rendered = with_placeholders(katana_replace, url=urls[0], target=report.normalized_target, domain=report.normalized_target)
+            if not any("{url}" in arg or "{target}" in arg or "{domain}" in arg for arg in katana_replace) and not has_flag(rendered, "-u", "-list"):
+                rendered.extend(["-u", urls[0]])
+            result = run_cmd(["katana", *rendered], min(timeout, 45))
+        else:
+            result = run_cmd(["katana", "-silent", "-no-color", *katana_preset_args(preset), *custom_args(preset, "katana"), "-u", urls[0]], min(timeout, 45))
         save_artifact(report, raw_dir, "katana-depth1.txt", result.stdout)
         add_extra(report, "HTTP Crawl", "katana", result, first_lines(result.stdout, 12))
     else:
@@ -414,12 +546,23 @@ def scan_screenshots(report: ReconReport, timeout: int, raw_dir: Path | None = N
     urls = web_urls(report)
     if not urls:
         return
+    if preset_only(preset) and not custom_args(preset, "gowitness"):
+        return
     if not which_tool("gowitness"):
         add_extra(report, "Screenshots", "gowitness", CmdResult(["gowitness"], False, missing=True, stderr="gowitness not found"), [])
         return
     out_dir = (raw_dir or Path("recon-artifacts")) / "screenshots"
     out_dir.mkdir(parents=True, exist_ok=True)
-    result = run_cmd(["gowitness", "scan", "single", "--url", urls[0], "--screenshot-path", str(out_dir), *custom_args(preset, "gowitness")], min(timeout, 60))
+    gowitness_replace = replace_args(preset, "gowitness")
+    if gowitness_replace:
+        rendered = with_placeholders(gowitness_replace, url=urls[0], target=report.normalized_target, domain=report.normalized_target, out_dir=str(out_dir))
+        if not any("{url}" in arg or "{target}" in arg or "{domain}" in arg for arg in gowitness_replace) and not has_flag(rendered, "--url"):
+            rendered.extend(["--url", urls[0]])
+        if not any("{out_dir}" in arg for arg in gowitness_replace) and not has_flag(rendered, "--screenshot-path"):
+            rendered.extend(["--screenshot-path", str(out_dir)])
+        result = run_cmd(["gowitness", *rendered], min(timeout, 60))
+    else:
+        result = run_cmd(["gowitness", "scan", "single", "--url", urls[0], "--screenshot-path", str(out_dir), *custom_args(preset, "gowitness")], min(timeout, 60))
     save_artifact(report, raw_dir, "gowitness.txt", result.stdout or result.stderr)
     add_extra(report, "Screenshots", "gowitness", result, first_lines(result.stdout or result.stderr, 8))
 
@@ -428,9 +571,18 @@ def scan_templates(report: ReconReport, timeout: int, raw_dir: Path | None = Non
     urls = web_urls(report)
     if not urls:
         return
+    if preset_only(preset) and not custom_args(preset, "nuclei"):
+        return
     if not which_tool("nuclei"):
         add_extra(report, "Template Checks", "nuclei", CmdResult(["nuclei"], False, missing=True, stderr="nuclei not found"), [])
         return
-    result = run_cmd(["nuclei", "-silent", "-no-color", *nuclei_preset_args(preset), *custom_args(preset, "nuclei"), "-u", urls[0]], min(timeout, 90))
+    nuclei_replace = replace_args(preset, "nuclei")
+    if nuclei_replace:
+        rendered = with_placeholders(nuclei_replace, url=urls[0], target=report.normalized_target, domain=report.normalized_target)
+        if not any("{url}" in arg or "{target}" in arg or "{domain}" in arg for arg in nuclei_replace) and not has_flag(rendered, "-u", "-l"):
+            rendered.extend(["-u", urls[0]])
+        result = run_cmd(["nuclei", *rendered], min(timeout, 90))
+    else:
+        result = run_cmd(["nuclei", "-silent", "-no-color", *nuclei_preset_args(preset), *custom_args(preset, "nuclei"), "-u", urls[0]], min(timeout, 90))
     save_artifact(report, raw_dir, "nuclei.txt", result.stdout or result.stderr)
     add_extra(report, "Template Checks", "nuclei", result, first_lines(result.stdout or result.stderr, 12))

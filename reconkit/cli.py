@@ -13,7 +13,7 @@ from .deps import install_deps, print_dependencies
 from .models import ReconReport
 from .render import render
 from .reports import diff_reports, save_html, save_json, save_markdown
-from .presets import create_preset, delete_preset, list_preset_rows, load_presets, preset_exists, prompt_create_preset, validate_preset_name
+from .presets import create_preset, delete_preset, list_preset_rows, load_presets, preset_exists, preset_strategy, preset_tool_args, prompt_create_preset, validate_preset_name
 from .scanners import parse_modules, scan_dns, scan_extra_modules, scan_nmap, scan_whois
 from .self_install import install_command_entry
 from .target import normalize_target, resolve_target, reverse_lookup, target_has_scan_endpoint
@@ -87,6 +87,7 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
     parser.add_argument("--preset-show", metavar="NAME", help="show a saved scan preset")
     parser.add_argument("--preset-create", metavar="NAME", help="interactively create a saved scan preset")
     parser.add_argument("--preset-base", choices=("quick", "standard", "full", "web", "vuln"), default="standard", help="base preset for --preset-create/--preset-add")
+    parser.add_argument("--preset-strategy", choices=("append", "replace", "only"), default="append", help="custom preset mode: append defaults, replace configured tools, or run only configured preset tools")
     parser.add_argument("--preset-add", action="append", default=[], metavar="TOOL=ARGS", help="create/update preset non-interactively; repeat, e.g. nmap='--reason'")
     parser.add_argument("--preset-desc", default="", help="description for --preset-create/--preset-add")
     parser.add_argument("--preset-delete", metavar="NAME", help="delete a saved custom preset")
@@ -170,7 +171,7 @@ def main(argv: list[str] | None = None) -> int:
 
     if args.preset_list:
         print(hr("Scan Presets", colorize=colorize))
-        print(table(["Name", "Type", "Base", "Description"], list_preset_rows(), colorize=colorize, max_widths=[22, 10, 12, 80]))
+        print(table(["Name", "Type", "Base", "Mode", "Description"], list_preset_rows(), colorize=colorize, max_widths=[22, 10, 12, 10, 80]))
         return 0
     if args.preset_show:
         try:
@@ -205,9 +206,9 @@ def main(argv: list[str] | None = None) -> int:
                         raise ValueError(f"Invalid --preset-add value: {item}. Use TOOL=ARGS")
                     tool, raw = item.split("=", 1)
                     tool_args[tool.strip()] = raw
-                create_preset(args.preset_create, args.preset_base, tool_args, args.preset_desc)
+                create_preset(args.preset_create, args.preset_base, tool_args, args.preset_desc, args.preset_strategy)
             else:
-                prompt_create_preset(args.preset_create, args.preset_base)
+                prompt_create_preset(args.preset_create, args.preset_base, args.preset_strategy)
             print(color(f"[+] Saved preset: {args.preset_create}", C.GREEN, colorize))
             return 0
         except (ValueError, OSError, json.JSONDecodeError) as exc:
@@ -298,8 +299,11 @@ def main(argv: list[str] | None = None) -> int:
     for ip in report.resolved_ips:
         report.reverse_dns[ip] = reverse_lookup(ip)
 
-    status("Collecting DNS records", colorize=colorize)
-    scan_dns(target, max(10, args.timeout), report)
+    if preset_strategy(args.scan_preset) == "only" and not preset_tool_args(args.scan_preset, "dig"):
+        report.notes.append("Default DNS record scan skipped because scan preset mode is only.")
+    else:
+        status("Collecting DNS records", colorize=colorize)
+        scan_dns(target, max(10, args.timeout), report)
 
     if target_has_scan_endpoint(report):
         status(f"Launching nmap mode: {mode}", colorize=colorize)
@@ -313,7 +317,7 @@ def main(argv: list[str] | None = None) -> int:
 
     if not args.no_whois:
         status("Pulling WHOIS summary", colorize=colorize)
-        scan_whois(target, max(10, args.timeout), report)
+        scan_whois(target, max(10, args.timeout), report, args.scan_preset)
 
     report.elapsed_seconds = time.monotonic() - started
     print(render(report, colorize=colorize, show_commands=args.show_commands, explain=args.explain))
