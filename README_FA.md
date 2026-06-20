@@ -17,9 +17,35 @@
 
 ---
 
+## ‏انتخاب راهنما
+
+<p align="center">
+  <a href="README_FA.md"><img alt="راهنمای فارسی" src="https://img.shields.io/badge/راهنمای_فارسی-README_FA-00B894?style=for-the-badge&logo=googledocs&logoColor=white"></a>
+  <a href="README.md"><img alt="English Docs" src="https://img.shields.io/badge/Docs-English-111827?style=for-the-badge&logo=readme&logoColor=white"></a>
+  <a href="https://youtu.be/SHGSs4-qw9Y"><img alt="ویدیوی یوتیوب" src="https://img.shields.io/badge/ویدیوی_معرفی_و_تست-YouTube-FF0000?style=for-the-badge&logo=youtube&logoColor=white"></a>
+</p>
+
+> ‏اگر تازه با ReconKit آشنا شدی، اول راهنمای فارسی یا انگلیسی را باز کن، بعد ویدیوی یوتیوب را ببین؛ داخل ویدیو ابزار را معرفی کردیم، اجرا کردیم و خروجی واقعی‌اش را نشان دادیم.
+
+## ‏ویدیوی معرفی و تست ReconKit
+
+‏برای اینکه قبل از نصب، حس واقعی ابزار را ببینی، یک ویدیوی کوتاه آماده شده: ReconKit چیست، چطور اجرا می‌شود، ظاهر داشبوردش چطور است و workflow اسکن و گزارش‌گیری چه شکلی دارد.
+
+<p align="center">
+  <a href="https://youtu.be/SHGSs4-qw9Y">
+    <img src="https://img.shields.io/badge/▶_مشاهده_در_یوتیوب-معرفی_و_تست_ReconKit-FF0000?style=for-the-badge&logo=youtube&logoColor=white" alt="مشاهده ویدیوی ReconKit در یوتیوب">
+  </a>
+</p>
+
+---
+
 ## ‏فهرست سریع
 
+- ‏[انتخاب راهنما](#انتخاب-راهنما)
+- ‏[ویدیوی معرفی و تست ReconKit](#ویدیوی-معرفی-و-تست-reconkit)
 - ‏[ReconKit چیست؟](#reconkit-چیست)
+- ‏[ویژگی‌های مهم](#ویژگیهای-مهم)
+- ‏[پیش‌نمایش](#پیشنمایش)
 - ‏[نصب سریع](#نصب-سریع)
 - ‏[شروع سریع](#شروع-سریع)
 - ‏[کنسول تعاملی](#کنسول-تعاملی)
@@ -30,8 +56,8 @@
 - ‏[گزارش‌ها و خروجی‌ها](#گزارشها-و-خروجیها)
 - ‏[هوش مصنوعی OpenRouter](#هوش-مصنوعی-openrouter)
 - ‏[نصب ابزارهای جانبی](#نصب-ابزارهای-جانبی)
+- ‏[حذف ReconKit](#حذف-reconkit)
 - ‏[تمام سوییچ‌ها و آپشن‌ها](#تمام-سوییچها-و-آپشنها)
-- ‏[سناریوهای آماده](#سناریوهای-آماده)
 - ‏[رفع خطاهای رایج](#رفع-خطاهای-رایج)
 - ‏[نکات اخلاقی و قانونی](#نکات-اخلاقی-و-قانونی)
 
@@ -56,6 +82,27 @@
 - ‏ساخت preset اختصاصی برای اسکن‌های تکراری
 
 > ‏نکته مهم: ReconKit برای سیستم‌هایی است که مالک آن هستی یا مجوز کتبی برای تست داری. ابزار برای brute force، exploit، malware، persistence، bypass یا خرابکاری طراحی نشده است.
+
+---
+
+## ‏ویژگی‌های مهم
+
+- ‏**کنسول تعاملی ساده**: با `reconkit` وارد محیطی شبیه launcher می‌شوی و با دستورهایی مثل `set target`, `show options`, `run`, `mission` کار می‌کنی.
+- ‏**ترکیب ابزارهای واقعی recon**: DNS، nmap، WHOIS، fingerprint وب، TLS، passive discovery، screenshot و nuclei template checks در یک workflow مرتب جمع شده‌اند.
+- ‏**تحلیل AI**: خروجی scan را به OpenRouter می‌فرستد و یک تحلیل دفاعی خوانا و مرحله‌بندی‌شده می‌دهد.
+- ‏**گزارش‌های قابل ارائه**: خروجی JSON، Markdown، HTML، raw artifacts، diff و AI report دارد.
+- ‏**نصب خودکار ابزارها**: روی Linux/macOS تلاش می‌کند ابزارهای لازم را با package manager، Go، pipx یا pip نصب کند.
+- ‏**خروجی تمیز و قابل فهم**: جدول‌ها، خلاصه‌ها، notes و commandهای اجراشده را مرتب نشان می‌دهد.
+
+---
+
+## ‏پیش‌نمایش
+
+<p align="center">
+  <img src="rnlinux.png" alt="ReconKit terminal preview">
+</p>
+
+‏ReconKit خروجی اسکن را به شکل منظم نشان می‌دهد: خلاصه هدف، DNS، پورت‌ها، سرویس‌ها، ابزارهای جانبی، notes، گزارش‌ها و تحلیل AI در یک نمای خوانا کنار هم قرار می‌گیرند.
 
 ---
 
@@ -128,6 +175,18 @@ reconkit --check-deps
 python3 recon.py --help
 python3 recon.py example.com
 ```
+
+### ‏سیستم‌های پشتیبانی‌شده
+
+| ‏سیستم | ‏روش پیشنهادی نصب |
+|---|---|
+| ‏Kali / Ubuntu / Debian | ‏`curl -fsSL .../scripts/install.sh | sh` |
+| ‏Fedora / RHEL-like | ‏`curl -fsSL .../scripts/install.sh | sh` |
+| ‏Arch Linux | ‏`curl -fsSL .../scripts/install.sh | sh` |
+| ‏Alpine Linux | ‏`curl -fsSL .../scripts/install.sh | sh` |
+| ‏macOS | ‏`curl -fsSL .../scripts/install.sh | sh` |
+
+‏برای اولین تست جدی، یک VPS یا VM تمیز بهترین گزینه است تا نصب خودکار ابزارها از صفر تا صد بهتر بررسی شود.
 
 ---
 
@@ -229,6 +288,8 @@ reconkit(example.com)> exit
 | ‏`quick example.com` | ‏اسکن سریع همان لحظه |
 | ‏`mission example.com` | ‏اجرای workflow کامل mission |
 | ‏`install` | ‏نصب ابزارهای required + optional |
+| ‏`uninstall` | ‏حذف command نصب‌شده `reconkit` |
+| ‏`uninstall purge` | ‏حذف command به همراه config/presetها و پوشه نصب محلی وقتی امن باشد |
 | ‏`dryrun` | ‏نمایش برنامه نصب بدون نصب واقعی |
 | ‏`test ai` | ‏تست endpoint/model/API key هوش مصنوعی |
 | ‏`ai init` | ‏ساخت یا آپدیت فایل کانفیگ AI |
@@ -413,11 +474,14 @@ reconkit --preset-create corpfull --preset-base full --preset-strategy append --
 
 ```bash
 reconkit --preset-create addheaders --preset-strategy append \
+  --preset-add 'nmap=--reason' \
   --preset-add 'httpx=-H "X-Client: ACME"' \
   --preset-add 'nuclei=-tags exposure'
 
 reconkit example.com --mission --scan-preset addheaders
 ```
+
+‏نکته: `--reason` در این مثال سوییچ خود ReconKit نیست؛ یک آرگومان nmap است که داخل preset به nmap پاس داده می‌شود.
 
 ### ‏مثال replace
 
@@ -646,6 +710,38 @@ reconkit --install-deps --with-optional --dry-run
 
 ---
 
+
+## ‏حذف ReconKit
+
+اگر خواستی فقط دستور نصب‌شده `reconkit` حذف شود:
+
+```bash
+reconkit --uninstall
+```
+
+برای اینکه قبل از حذف ببینی چه چیزهایی حذف می‌شوند:
+
+```bash
+reconkit --uninstall --dry-run
+```
+
+اگر می‌خواهی command به همراه فایل‌های config/preset و پوشه نصب `~/.reconkit` هم حذف شود، از purge استفاده کن:
+
+```bash
+reconkit --uninstall --purge
+```
+
+از داخل منوی تعاملی هم می‌توانی بزنی:
+
+```text
+reconkit(no-target)> uninstall
+reconkit(no-target)> uninstall purge
+```
+
+نکته مهم: حذف ReconKit ابزارهای مشترک سیستم مثل `nmap`, `curl`, `go`, `python3` یا ابزارهای نصب‌شده با package manager را حذف نمی‌کند، چون ممکن است برنامه‌های دیگر هم از آن‌ها استفاده کنند.
+
+---
+
 ## ‏تمام سوییچ‌ها و آپشن‌ها
 
 ‏این جدول بر اساس سوییچ‌های واقعی ابزار نوشته شده است.
@@ -691,6 +787,8 @@ reconkit --install-deps --with-optional --dry-run
 | ‏`--with-optional` | ‏`--install-deps --with-optional` | ‏نصب ابزارهای optional هم انجام شود |
 | ‏`--dry-run` | ‏`--install-deps --dry-run` | ‏فقط نمایش برنامه نصب بدون اجرا |
 | ‏`--check-deps` | ‏`--check-deps` | ‏بررسی وضعیت ابزارها |
+| ‏`--uninstall` | ‏`--uninstall` | ‏حذف command نصب‌شده `reconkit` |
+| ‏`--purge` | ‏`--uninstall --purge` | ‏همراه با uninstall، config/presetها و پوشه نصب محلی را هم حذف می‌کند وقتی امن باشد |
 | ‏`--ai` | ‏`--ai` | ‏فعال کردن تحلیل AI بعد از اسکن |
 | ‏`--ai-timeout` | ‏`--ai-timeout 90` | ‏timeout درخواست AI |
 | ‏`--ai-out` | ‏`--ai-out ai-report.md` | ‏ذخیره خروجی AI |
@@ -702,71 +800,6 @@ reconkit --install-deps --with-optional --dry-run
 | ‏`--show-config` | ‏`--show-config` | ‏alias برای `--ai-show` |
 | ‏`--test-ai` | ‏`--test-ai` | ‏تست endpoint/model/API key بدون اسکن |
 | ‏`--version` | ‏`--version` | ‏نمایش نسخه و لینک‌های Team CynetX |
-
----
-
-## ‏سناریوهای آماده
-
-### ‏۱. تست سریع یک دامنه
-
-```bash
-reconkit example.com
-```
-
-### ‏۲. اسکن با پورت‌های خاص
-
-```bash
-reconkit example.com -p 80,443,8080,8443
-```
-
-### ‏۳. اسکن عمیق با زمان بیشتر
-
-```bash
-reconkit example.com --deep -t 180
-```
-
-### ‏۴. اسکن وب‌محور
-
-```bash
-reconkit example.com -M web,http-detail,tls --scan-preset web
-```
-
-### ‏۵. اسکن کامل mission با گزارش‌ها
-
-```bash
-reconkit example.com --mission --raw-dir artifacts -o scan.json --markdown report.md --html report.html -t 120
-```
-
-### ‏۶. اسکن با AI
-
-```bash
-reconkit example.com --deep --ai --ai-out ai-report.md -o scan.json
-```
-
-### ‏۷. اسکن بدون WHOIS
-
-```bash
-reconkit example.com --no-whois
-```
-
-### ‏۸. دیدن دقیق دستورهای ابزارها
-
-```bash
-reconkit example.com --cmd
-```
-
-### ‏۹. ساخت preset اختصاصی و استفاده مجدد
-
-```bash
-reconkit --preset-create mypreset
-reconkit example.com --scan-preset mypreset --cmd
-```
-
-### ‏۱۰. خروجی مناسب آرشیو پروژه
-
-```bash
-reconkit example.com --mission --raw-dir artifacts -o scan.json --markdown report.md --html report.html --cmd
-```
 
 ---
 

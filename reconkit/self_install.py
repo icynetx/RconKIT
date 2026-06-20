@@ -115,3 +115,99 @@ def install_command_entry(name: str = "reconkit", *, prefer_user: bool = False, 
     print(color(f"[+] Installed command: {installed}", C.GREEN, colorize))
     print(color("[+] Try now: reconkit", C.CYAN, colorize))
     return 0
+
+
+def remove_path_block(*, colorize: bool = True) -> bool:
+    rc = Path.home() / ".bashrc"
+    if not rc.exists():
+        return False
+    original = rc.read_text(encoding="utf-8")
+    if PATH_BLOCK_BEGIN not in original or PATH_BLOCK_END not in original:
+        return False
+    before, rest = original.split(PATH_BLOCK_BEGIN, 1)
+    _, after = rest.split(PATH_BLOCK_END, 1)
+    updated = before.rstrip() + "\n" + after.lstrip("\n")
+    rc.with_suffix(rc.suffix + ".reconkit-uninstall.bak").write_text(original, encoding="utf-8")
+    rc.write_text(updated.rstrip() + "\n", encoding="utf-8")
+    print(color(f"[+] Removed ReconKit PATH block from {rc}", C.GREEN, colorize))
+    return True
+
+
+def launcher_targets(name: str = "reconkit") -> list[Path]:
+    targets: list[Path] = []
+    for directory in candidate_bin_dirs():
+        target = directory / name
+        if target not in targets:
+            targets.append(target)
+    first = first_path_command(name)
+    if first and first not in targets:
+        targets.append(first)
+    return targets
+
+
+def launcher_points_to_reconkit(path: Path) -> bool:
+    try:
+        if path.is_symlink():
+            resolved = path.resolve(strict=False)
+            return "reconkit" in str(resolved).lower() or "rconkit" in str(resolved).lower()
+        if not path.exists() or not path.is_file():
+            return False
+        text = path.read_text(encoding="utf-8", errors="ignore")[:1200]
+    except OSError:
+        return False
+    return "recon.py" in text and ("ReconKit" in text or ".reconkit" in text or "reconkit" in text.lower())
+
+
+def uninstall_command_entry(name: str = "reconkit", *, purge: bool = False, dry_run: bool = False, colorize: bool = True) -> int:
+    repo_root = Path(__file__).resolve().parent.parent
+    removed = 0
+    for target in launcher_targets(name):
+        if not (target.exists() or target.is_symlink()):
+            continue
+        if not launcher_points_to_reconkit(target):
+            print(color(f"[!] Skipping non-ReconKit command: {target}", C.YELLOW, colorize))
+            continue
+        if dry_run:
+            print(color(f"[*] Would remove command: {target}", C.CYAN, colorize))
+        else:
+            try:
+                target.unlink()
+                removed += 1
+                print(color(f"[+] Removed command: {target}", C.GREEN, colorize))
+            except OSError as exc:
+                print(color(f"[!] Could not remove {target}: {exc}", C.RED, colorize))
+                return 1
+    if dry_run:
+        print(color(f"[*] Would remove ReconKit PATH block from ~/.bashrc if present", C.CYAN, colorize))
+    else:
+        remove_path_block(colorize=colorize)
+
+    if purge:
+        purge_targets = [repo_root / "recon_config.json", repo_root / "recon_presets.json"]
+        home_root = Path.home() / ".reconkit"
+        for item in purge_targets:
+            if item.exists():
+                if dry_run:
+                    print(color(f"[*] Would remove data file: {item}", C.CYAN, colorize))
+                else:
+                    item.unlink()
+                    print(color(f"[+] Removed data file: {item}", C.GREEN, colorize))
+        try:
+            repo_inside_home_root = repo_root.resolve().is_relative_to(home_root.resolve())
+        except OSError:
+            repo_inside_home_root = False
+        if home_root.exists() and repo_inside_home_root:
+            if dry_run:
+                print(color(f"[*] Would remove install directory: {home_root}", C.CYAN, colorize))
+            else:
+                import shutil
+                shutil.rmtree(home_root)
+                print(color(f"[+] Removed install directory: {home_root}", C.GREEN, colorize))
+
+    if dry_run:
+        print(color("[+] Uninstall dry-run complete.", C.GREEN, colorize))
+    elif removed == 0:
+        print(color("[!] No ReconKit command launcher was found to remove.", C.YELLOW, colorize))
+    else:
+        print(color("[+] ReconKit command uninstall complete. Open a new terminal if your shell cached the command.", C.GREEN, colorize))
+    return 0

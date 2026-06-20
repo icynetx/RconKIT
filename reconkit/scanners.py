@@ -344,7 +344,7 @@ def scan_web_stack(report: ReconReport, timeout: int, aggressive: bool, preset: 
         pass
     elif which_tool("wafw00f"):
         wafw00f_replace = replace_args(preset, "wafw00f")
-        result = run_cmd(command_from_preset("wafw00f", waf_replace, urls[0], "{url}") if waf_replace else ["wafw00f", "-a", urls[0], *custom_args(preset, "wafw00f")], timeout)
+        result = run_cmd(command_from_preset("wafw00f", wafw00f_replace, urls[0], "{url}") if wafw00f_replace else ["wafw00f", "-a", urls[0], *custom_args(preset, "wafw00f")], timeout)
         add_extra(report, "WAF Check", "wafw00f", result, summarize_wafw00f(result.stdout))
     else:
         add_extra(report, "WAF Check", "wafw00f", CmdResult(["wafw00f"], False, missing=True, stderr="wafw00f not found"), [])

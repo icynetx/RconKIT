@@ -30,6 +30,28 @@
 
 ---
 
+## 🌍 Choose Your Guide
+
+<p align="center">
+  <a href="README.md"><img alt="English Docs" src="https://img.shields.io/badge/Docs-English-111827?style=for-the-badge&logo=readme&logoColor=white"></a>
+  <a href="README_FA.md"><img alt="Persian Docs" src="https://img.shields.io/badge/راهنمای_فارسی-README_FA-00B894?style=for-the-badge&logo=googledocs&logoColor=white"></a>
+  <a href="https://youtu.be/SHGSs4-qw9Y"><img alt="YouTube Demo" src="https://img.shields.io/badge/Watch-Demo_&_Test-FF0000?style=for-the-badge&logo=youtube&logoColor=white"></a>
+</p>
+
+> New here? Start with the guide in your language, then watch the YouTube walkthrough where we introduce ReconKit, run it, and show what the output feels like in a real terminal.
+
+## 🎬 Watch ReconKit In Action
+
+We made a short hands-on video for people who want to see the tool before installing it: what ReconKit is, how it runs, how the dashboard looks, and how the scan/report flow works.
+
+<p align="center">
+  <a href="https://youtu.be/SHGSs4-qw9Y">
+    <img src="https://img.shields.io/badge/▶_Watch_on_YouTube-ReconKit_Demo_&_Test-FF0000?style=for-the-badge&logo=youtube&logoColor=white" alt="Watch ReconKit demo on YouTube">
+  </a>
+</p>
+
+---
+
 ## ✨ What Is ReconKit?
 
 ReconKit is a practical recon workspace for people who want useful answers without juggling ten terminals. Give it a domain or IP, and it brings together tools like `nmap`, `dig`, `whatweb`, `httpx`, `sslscan`, `nuclei`, and more — then turns the output into clean tables, notes, reports, and optional AI analysis.
@@ -139,6 +161,8 @@ Run `reconkit` with no arguments and you get a guided console instead of a wall 
 | `quick example.com` | Runs a fast safe scan immediately. |
 | `mission example.com` | Runs the full mission workflow. |
 | `install` | Installs required + optional tools best-effort. |
+| `uninstall` | Removes the installed `reconkit` command launcher. |
+| `uninstall purge` | Removes command plus local ReconKit config/install directory when safe. |
 | `dryrun` | Shows dependency install plan without installing. |
 | `test ai` | Tests OpenRouter endpoint/model/API key. |
 | `ai init` | Creates/updates `recon_config.json` with default AI settings. |
@@ -217,6 +241,36 @@ python3 recon.py example.com -M safe --no-whois
 | Alpine Linux | `curl -fsSL .../scripts/install.sh \| sh` |
 | macOS | `curl -fsSL .../scripts/install.sh \| sh` |
 
+
+
+### Uninstall
+
+Remove only the installed `reconkit` command launcher and ReconKit PATH block:
+
+```bash
+reconkit --uninstall
+```
+
+Preview uninstall without changing anything:
+
+```bash
+reconkit --uninstall --dry-run
+```
+
+Remove the command plus local ReconKit config/presets and the `~/.reconkit` install directory when ReconKit is installed there:
+
+```bash
+reconkit --uninstall --purge
+```
+
+Inside the interactive console you can also run:
+
+```text
+reconkit(no-target)> uninstall
+reconkit(no-target)> uninstall purge
+```
+
+Uninstall does not remove shared system tools such as `nmap`, `curl`, `go`, or `python`, because those may be used by other software.
 
 ## 📦 Automatic Tool Installer
 
@@ -447,6 +501,8 @@ Supported custom-argument tools:
 | `--with-optional` | `--install-deps --with-optional` | Also install optional recon/web/TLS tools. |
 | `--dry-run` | `--install-deps --dry-run` | Print install plan without installing. |
 | `--check-deps` | `--check-deps` | Print dependency status and exit. |
+| `--uninstall` | `--uninstall` | Remove the installed `reconkit` command launcher. |
+| `--purge` | `--uninstall --purge` | Also remove local config/presets and `~/.reconkit` install directory when safe. |
 | `--ai` | `--ai` | Analyze scan results using `recon_config.json`. |
 | `--ai-timeout` | `--ai-timeout 90` | AI request timeout in seconds. |
 | `--ai-out` | `--ai-out ai-report.md` | Save AI analysis to a file. |

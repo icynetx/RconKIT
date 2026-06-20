@@ -45,6 +45,8 @@ HELP_ROWS = [
     ["quick example.com", "Fast safe scan immediately."],
     ["mission example.com", "Full mission scan with reports/artifacts."],
     ["install", "Install required + optional tools best-effort."],
+    ["uninstall", "Remove the reconkit command launcher."],
+    ["uninstall purge", "Remove command plus local ReconKit config/install directory."],
     ["test ai", "Test configured AI endpoint/API key."],
     ["shell <command>", "Run a local shell command."],
     ["exit / quit", "Leave the console."],
@@ -269,6 +271,13 @@ def handle_command(line: str, state: ConsoleState, *, colorize: bool = True) -> 
             run_main(build_scan_args(state))
         elif command == "install":
             run_main(["--install-deps", "--with-optional"])
+        elif command == "uninstall":
+            uninstall_args = ["--uninstall"]
+            if rest[:1] == ["purge"]:
+                uninstall_args.append("--purge")
+            elif rest[:1] == ["dryrun"]:
+                uninstall_args.append("--dry-run")
+            run_main(uninstall_args)
         elif command == "dryrun":
             run_main(["--install-deps", "--with-optional", "--dry-run"])
         elif command == "test" and rest[:1] == ["ai"]:

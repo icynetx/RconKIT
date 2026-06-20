@@ -15,7 +15,7 @@ from .render import render
 from .reports import diff_reports, save_html, save_json, save_markdown
 from .presets import create_preset, delete_preset, list_preset_rows, load_presets, preset_exists, preset_strategy, preset_tool_args, prompt_create_preset, validate_preset_name
 from .scanners import parse_modules, scan_dns, scan_extra_modules, scan_nmap, scan_whois
-from .self_install import install_command_entry
+from .self_install import install_command_entry, uninstall_command_entry
 from .target import normalize_target, resolve_target, reverse_lookup, target_has_scan_endpoint
 from .ui import C, box, color, hr, pill, supports_color, table
 
@@ -102,6 +102,8 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
     parser.add_argument("--with-optional", action="store_true", help="with --install-deps, also install optional recon/web/TLS tools")
     parser.add_argument("--dry-run", action="store_true", help="with --install-deps, print install commands only")
     parser.add_argument("--check-deps", action="store_true", help="print dependency status and exit")
+    parser.add_argument("--uninstall", action="store_true", help="remove the installed reconkit command launcher")
+    parser.add_argument("--purge", action="store_true", help="with --uninstall, also remove ReconKit config/presets and ~/.reconkit install directory when safe")
     parser.add_argument("--ai", action="store_true", help="analyze scan results using recon_config.json AI settings")
     parser.add_argument("--ai-timeout", type=int, default=60, help="AI request timeout")
     parser.add_argument("--ai-out", type=Path, help="save AI analysis to file")
@@ -140,6 +142,7 @@ def render_home(colorize: bool = True) -> str:
         ["Install command only", "python3 recon.py --self-install --user"],
         ["Install tools", "reconkit --install-deps --with-optional"],
         ["Check setup", "reconkit --check-deps"],
+        ["Uninstall", "reconkit --uninstall --dry-run"],
         ["AI test", "reconkit --test-ai"],
     ]
     tips_rows = [
@@ -218,6 +221,9 @@ def main(argv: list[str] | None = None) -> int:
         except (ValueError, OSError, json.JSONDecodeError) as exc:
             print(color(f"Preset error: {exc}", C.RED, colorize), file=sys.stderr)
             return 2
+
+    if args.uninstall:
+        return uninstall_command_entry(purge=args.purge, dry_run=args.dry_run, colorize=colorize)
 
     if args.self_install:
         code = install_command_entry(prefer_user=args.user_install, colorize=colorize)
