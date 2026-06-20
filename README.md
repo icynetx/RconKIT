@@ -30,25 +30,25 @@
 
 ---
 
-## 🌍 Choose Your Guide
+## 🌍 Docs + Video Demo
 
 <p align="center">
-  <a href="README.md"><img alt="English Docs" src="https://img.shields.io/badge/Docs-English-111827?style=for-the-badge&logo=readme&logoColor=white"></a>
-  <a href="README_FA.md"><img alt="Persian Docs" src="https://img.shields.io/badge/راهنمای_فارسی-README_FA-00B894?style=for-the-badge&logo=googledocs&logoColor=white"></a>
-  <a href="https://youtu.be/SHGSs4-qw9Y"><img alt="YouTube Demo" src="https://img.shields.io/badge/Watch-Demo_&_Test-FF0000?style=for-the-badge&logo=youtube&logoColor=white"></a>
+  <a href="README.md"><b>🇬🇧 English Documentation</b></a>
+  &nbsp;•&nbsp;
+  <a href="README_FA.md"><b>🇮🇷 مستندات فارسی</b></a>
 </p>
-
-> New here? Start with the guide in your language, then watch the YouTube walkthrough where we introduce ReconKit, run it, and show what the output feels like in a real terminal.
-
-## 🎬 Watch ReconKit In Action
-
-We made a short hands-on video for people who want to see the tool before installing it: what ReconKit is, how it runs, how the dashboard looks, and how the scan/report flow works.
 
 <p align="center">
   <a href="https://youtu.be/SHGSs4-qw9Y">
-    <img src="https://img.shields.io/badge/▶_Watch_on_YouTube-ReconKit_Demo_&_Test-FF0000?style=for-the-badge&logo=youtube&logoColor=white" alt="Watch ReconKit demo on YouTube">
+    <img src="https://img.youtube.com/vi/SHGSs4-qw9Y/maxresdefault.jpg" alt="Watch ReconKit demo on YouTube" width="760">
   </a>
 </p>
+
+<p align="center">
+  <a href="https://youtu.be/SHGSs4-qw9Y"><img alt="Watch on YouTube" src="https://img.shields.io/badge/▶_Watch_the_Demo_on_YouTube-FF0000?style=for-the-badge&logo=youtube&logoColor=white"></a>
+</p>
+
+> Pick the guide you prefer, then watch the hands-on video where we introduce ReconKit, run a real scan, and show what the dashboard/report workflow feels like in a terminal.
 
 ---
 

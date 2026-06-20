@@ -17,32 +17,31 @@
 
 ---
 
-## ‏انتخاب راهنما
+## ‏راهنما و ویدیوی معرفی
 
-<p align="center">
-  <a href="README_FA.md"><img alt="راهنمای فارسی" src="https://img.shields.io/badge/راهنمای_فارسی-README_FA-00B894?style=for-the-badge&logo=googledocs&logoColor=white"></a>
-  <a href="README.md"><img alt="English Docs" src="https://img.shields.io/badge/Docs-English-111827?style=for-the-badge&logo=readme&logoColor=white"></a>
-  <a href="https://youtu.be/SHGSs4-qw9Y"><img alt="ویدیوی یوتیوب" src="https://img.shields.io/badge/ویدیوی_معرفی_و_تست-YouTube-FF0000?style=for-the-badge&logo=youtube&logoColor=white"></a>
+<p align="center" dir="rtl">
+  <a href="README_FA.md"><b>🇮🇷 مستندات فارسی</b></a>
+  &nbsp;•&nbsp;
+  <a href="README.md"><b>🇬🇧 English Documentation</b></a>
 </p>
-
-> ‏اگر تازه با ReconKit آشنا شدی، اول راهنمای فارسی یا انگلیسی را باز کن، بعد ویدیوی یوتیوب را ببین؛ داخل ویدیو ابزار را معرفی کردیم، اجرا کردیم و خروجی واقعی‌اش را نشان دادیم.
-
-## ‏ویدیوی معرفی و تست ReconKit
-
-‏برای اینکه قبل از نصب، حس واقعی ابزار را ببینی، یک ویدیوی کوتاه آماده شده: ReconKit چیست، چطور اجرا می‌شود، ظاهر داشبوردش چطور است و workflow اسکن و گزارش‌گیری چه شکلی دارد.
 
 <p align="center">
   <a href="https://youtu.be/SHGSs4-qw9Y">
-    <img src="https://img.shields.io/badge/▶_مشاهده_در_یوتیوب-معرفی_و_تست_ReconKit-FF0000?style=for-the-badge&logo=youtube&logoColor=white" alt="مشاهده ویدیوی ReconKit در یوتیوب">
+    <img src="https://img.youtube.com/vi/SHGSs4-qw9Y/maxresdefault.jpg" alt="مشاهده ویدیوی ReconKit در یوتیوب" width="760">
   </a>
 </p>
+
+<p align="center">
+  <a href="https://youtu.be/SHGSs4-qw9Y"><img alt="مشاهده در یوتیوب" src="https://img.shields.io/badge/▶_مشاهده_ویدیوی_معرفی_در_یوتیوب-FF0000?style=for-the-badge&logo=youtube&logoColor=white"></a>
+</p>
+
+> ‏راهنمای فارسی یا انگلیسی را انتخاب کن، بعد اگر خواستی قبل از نصب حس واقعی ابزار را ببینی، ویدیوی یوتیوب را ببین؛ داخل ویدیو ReconKit را معرفی کردیم، اجرا کردیم و خروجی واقعی اسکن و گزارش را نشان دادیم.
 
 ---
 
 ## ‏فهرست سریع
 
-- ‏[انتخاب راهنما](#انتخاب-راهنما)
-- ‏[ویدیوی معرفی و تست ReconKit](#ویدیوی-معرفی-و-تست-reconkit)
+- ‏[راهنما و ویدیوی معرفی](#راهنما-و-ویدیوی-معرفی)
 - ‏[ReconKit چیست؟](#reconkit-چیست)
 - ‏[ویژگی‌های مهم](#ویژگیهای-مهم)
 - ‏[پیش‌نمایش](#پیشنمایش)
