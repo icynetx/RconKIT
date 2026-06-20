@@ -52,6 +52,21 @@
 
 ---
 
+## 💜 Support The Project
+
+ReconKit is built by Team CynetX as a practical tool for cleaner recon, better reports, and easier security workflows. If the project gets real support — stars, feedback, issues, shares, testing on different systems, and useful ideas — we will keep improving it with new versions, cleaner modules, better presets, stronger reports, and more polished AI analysis.
+
+If ReconKit helps your workflow, the best support is simple:
+
+- ⭐ Star the GitHub repository
+- 🧪 Test it on your lab/VPS and report bugs
+- 💡 Suggest features that would actually help operators
+- 📣 Share it with people who still read raw tool output by hand
+
+> More support means more updates, better releases, and a stronger ReconKit for everyone.
+
+---
+
 ## ✨ What Is ReconKit?
 
 ReconKit is a practical recon workspace for people who want useful answers without juggling ten terminals. Give it a domain or IP, and it brings together tools like `nmap`, `dig`, `whatweb`, `httpx`, `sslscan`, `nuclei`, and more — then turns the output into clean tables, notes, reports, and optional AI analysis.
