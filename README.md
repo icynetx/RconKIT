@@ -310,6 +310,43 @@ reconkit example.com -M web,http-detail --scan-preset web
 reconkit example.com --templates --scan-preset vuln
 ```
 
+### Custom Presets
+
+You can create your own preset once, give it a name, and reuse it with only the target + preset name. ReconKit asks for extra arguments tool by tool and stores them in `recon_presets.json`.
+
+Interactive builder:
+
+```bash
+reconkit --preset-create corpfull --preset-base full
+```
+
+Non-interactive builder:
+
+```bash
+reconkit --preset-create corpfull --preset-base full --preset-desc "Corp full scan" \
+  --preset-add 'nmap=--reason' \
+  --preset-add 'httpx=-H "X-ROE-ID: ACME-2026"' \
+  --preset-add 'nuclei=-tags cves'
+```
+
+Use it later:
+
+```bash
+reconkit example.com --mission --scan-preset corpfull
+```
+
+Manage presets:
+
+```bash
+reconkit --preset-list
+reconkit --preset-show corpfull
+reconkit --preset-delete corpfull
+```
+
+Supported custom-argument tools:
+
+`nmap`, `dig`, `host`, `nslookup`, `whois`, `whatweb`, `httpx`, `wafw00f`, `nikto`, `sslscan`, `testssl.sh`, `subfinder`, `amass`, `curl`, `katana`, `gowitness`, `nuclei`
+
 ---
 
 ## 🧾 All CLI Switches
@@ -334,7 +371,14 @@ reconkit example.com --templates --scan-preset vuln
 | `--http-detail` | `--http-detail` | Adds HTTP headers and shallow crawl. |
 | `--screenshots` | `--screenshots` | Captures screenshot with `gowitness` when installed. |
 | `--templates`, `--nuclei` | `--templates` | Runs nuclei templates when installed and authorized. |
-| `--scan-preset` | `--scan-preset full` | Simple preset: `quick`, `standard`, `full`, `web`, `vuln`. |
+| `--scan-preset` | `--scan-preset corpfull` | Built-in or saved custom scan preset. |
+| `--preset-list` | `--preset-list` | List built-in and saved presets. |
+| `--preset-show` | `--preset-show corpfull` | Show a saved preset. |
+| `--preset-create` | `--preset-create corpfull` | Create a custom preset interactively. |
+| `--preset-base` | `--preset-base full` | Base preset for a custom preset. |
+| `--preset-add` | `--preset-add 'nmap=--reason'` | Add tool-specific args non-interactively. Repeatable. |
+| `--preset-desc` | `--preset-desc "Corp scan"` | Description for a custom preset. |
+| `--preset-delete` | `--preset-delete corpfull` | Delete a saved custom preset. |
 | `--cmd`, `--show-commands` | `--cmd` | Shows exact commands ReconKit executed. |
 | `--explain` | `--explain` | Shows a switch guide in the scan output. |
 | `--no-color` | `--no-color` | Disables ANSI colors. Useful for CI/log files. |

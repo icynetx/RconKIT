@@ -21,6 +21,7 @@ OPTIONAL_TOOLS = (
     "subfinder", "amass", "dnsx", "katana", "gowitness", "nuclei", "curl", "jq",
 )
 CONFIG_PATH = Path(__file__).resolve().parent.parent / "recon_config.json"
+PRESETS_PATH = Path(__file__).resolve().parent.parent / "recon_presets.json"
 DEFAULT_AI_CONFIG = {
     "provider": "openrouter",
     "endpoint_url": "https://openrouter.ai/api/v1/chat/completions",

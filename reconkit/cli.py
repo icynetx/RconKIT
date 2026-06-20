@@ -13,6 +13,7 @@ from .deps import install_deps, print_dependencies
 from .models import ReconReport
 from .render import render
 from .reports import diff_reports, save_html, save_json, save_markdown
+from .presets import create_preset, delete_preset, list_preset_rows, load_presets, preset_exists, prompt_create_preset, validate_preset_name
 from .scanners import parse_modules, scan_dns, scan_extra_modules, scan_nmap, scan_whois
 from .self_install import install_command_entry
 from .target import normalize_target, resolve_target, reverse_lookup, target_has_scan_endpoint
@@ -81,7 +82,14 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
     parser.add_argument("--http-detail", action="store_true", help="add curl header checks and shallow crawl when tools exist")
     parser.add_argument("--screenshots", action="store_true", help="capture a screenshot with gowitness when installed")
     parser.add_argument("--templates", "--nuclei", dest="templates", action="store_true", help="run nuclei templates when installed and authorized")
-    parser.add_argument("--scan-preset", choices=("quick", "standard", "full", "web", "vuln"), default="standard", help="simple scan preset: quick, standard, full, web, vuln")
+    parser.add_argument("--scan-preset", default="standard", help="scan preset: built-in quick/standard/full/web/vuln or a saved custom preset")
+    parser.add_argument("--preset-list", action="store_true", help="list built-in and saved scan presets")
+    parser.add_argument("--preset-show", metavar="NAME", help="show a saved scan preset")
+    parser.add_argument("--preset-create", metavar="NAME", help="interactively create a saved scan preset")
+    parser.add_argument("--preset-base", choices=("quick", "standard", "full", "web", "vuln"), default="standard", help="base preset for --preset-create/--preset-add")
+    parser.add_argument("--preset-add", action="append", default=[], metavar="TOOL=ARGS", help="create/update preset non-interactively; repeat, e.g. nmap='--reason'")
+    parser.add_argument("--preset-desc", default="", help="description for --preset-create/--preset-add")
+    parser.add_argument("--preset-delete", metavar="NAME", help="delete a saved custom preset")
     parser.add_argument("--cmd", "--show-commands", dest="show_commands", action="store_true", help="show exact commands")
     parser.add_argument("--explain", action="store_true", help="show switch guide in output")
     parser.add_argument("--no-color", action="store_true", help="disable colors")
@@ -160,6 +168,52 @@ def main(argv: list[str] | None = None) -> int:
         print(COPYRIGHT)
         return 0
 
+    if args.preset_list:
+        print(hr("Scan Presets", colorize=colorize))
+        print(table(["Name", "Type", "Base", "Description"], list_preset_rows(), colorize=colorize, max_widths=[22, 10, 12, 80]))
+        return 0
+    if args.preset_show:
+        try:
+            name = validate_preset_name(args.preset_show)
+            data = load_presets().get("presets", {})
+            preset = data.get(name) if isinstance(data, dict) else None
+            if not preset:
+                if name in {"quick", "standard", "full", "web", "vuln"}:
+                    print(json.dumps({"name": name, "type": "built-in"}, ensure_ascii=False, indent=2))
+                    return 0
+                print(color(f"Preset not found: {name}", C.RED, colorize), file=sys.stderr)
+                return 2
+            print(json.dumps({"name": name, **preset}, ensure_ascii=False, indent=2))
+            return 0
+        except (ValueError, OSError, json.JSONDecodeError) as exc:
+            print(color(f"Preset error: {exc}", C.RED, colorize), file=sys.stderr)
+            return 2
+    if args.preset_delete:
+        try:
+            deleted = delete_preset(args.preset_delete)
+            print(color(f"[+] Deleted preset: {args.preset_delete}" if deleted else f"[!] Preset not found: {args.preset_delete}", C.GREEN if deleted else C.YELLOW, colorize))
+            return 0 if deleted else 2
+        except (ValueError, OSError, json.JSONDecodeError) as exc:
+            print(color(f"Preset error: {exc}", C.RED, colorize), file=sys.stderr)
+            return 2
+    if args.preset_create:
+        try:
+            if args.preset_add:
+                tool_args = {}
+                for item in args.preset_add:
+                    if "=" not in item:
+                        raise ValueError(f"Invalid --preset-add value: {item}. Use TOOL=ARGS")
+                    tool, raw = item.split("=", 1)
+                    tool_args[tool.strip()] = raw
+                create_preset(args.preset_create, args.preset_base, tool_args, args.preset_desc)
+            else:
+                prompt_create_preset(args.preset_create, args.preset_base)
+            print(color(f"[+] Saved preset: {args.preset_create}", C.GREEN, colorize))
+            return 0
+        except (ValueError, OSError, json.JSONDecodeError) as exc:
+            print(color(f"Preset error: {exc}", C.RED, colorize), file=sys.stderr)
+            return 2
+
     if args.self_install:
         code = install_command_entry(prefer_user=args.user_install, colorize=colorize)
         if code != 0:
@@ -227,6 +281,10 @@ def main(argv: list[str] | None = None) -> int:
             modules |= parse_modules("templates")
     except ValueError as exc:
         print(color(f"Invalid input: {exc}", C.RED, colorize), file=sys.stderr)
+        return 2
+
+    if not preset_exists(args.scan_preset):
+        print(color(f"Unknown scan preset: {args.scan_preset}. Use --preset-list.", C.RED, colorize), file=sys.stderr)
         return 2
 
     mode = "deep" if args.deep else args.mode

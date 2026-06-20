@@ -6,6 +6,7 @@ from pathlib import Path
 from .constants import DEFAULT_RECORDS, FAST_PORTS, NMAP_TIMING_ARGS, PROFILE_PORTS, WEB_FALLBACK_PORTS, WEB_PORTS, WEB_SERVICES
 from .models import CmdResult, ExtraResult, ReconReport
 from .parsers import first_lines, parse_dig_answer, parse_nmap, summarize_host, summarize_nikto, summarize_nslookup, summarize_wafw00f, summarize_whatweb, whois_summary
+from .presets import preset_base, preset_tool_args
 from .runner import run_cmd, which_tool
 from .target import is_ip, target_has_scan_endpoint
 
@@ -47,7 +48,7 @@ def preset_config(preset: str) -> dict[str, object]:
             "nuclei_rate": 10, "nuclei_c": 6, "nuclei_retries": 1, "nuclei_timeout": 15, "katana_depth": 1, "katana_rate": 8,
         },
     }
-    return presets.get(preset, presets["standard"])
+    return presets.get(preset_base(preset), presets["standard"])
 
 
 def nmap_common_args(default_timing: str, default_retries: int, host_timeout: str, preset: str = "standard") -> list[str]:
@@ -84,6 +85,10 @@ def nuclei_preset_args(preset: str = "standard") -> list[str]:
         "-retries", str(config["nuclei_retries"]),
         "-timeout", str(config["nuclei_timeout"]),
     ]
+
+
+def custom_args(preset: str, tool: str) -> list[str]:
+    return preset_tool_args(preset, tool)
 
 
 def python_dns_fallback(target: str, report: ReconReport) -> None:
@@ -123,17 +128,17 @@ def scan_dns(target: str, timeout: int, report: ReconReport) -> None:
                 return
             report.dns_records[record] = parse_dig_answer(result.stdout)
 
-def scan_dns_tools(target: str, timeout: int, report: ReconReport) -> None:
+def scan_dns_tools(target: str, timeout: int, report: ReconReport, preset: str = "standard") -> None:
     if is_ip(target):
         return
     dns_timeout = max(5, min(timeout, 12))
     if which_tool("host"):
-        host_result = run_cmd(["host", "-a", target], dns_timeout)
+        host_result = run_cmd(["host", "-a", target, *custom_args(preset, "host")], dns_timeout)
         add_extra(report, "DNS Tools", "host", host_result, summarize_host(host_result.stdout))
     else:
         add_extra(report, "DNS Tools", "host", CmdResult(["host"], False, missing=True, stderr="host not found"), [])
     if which_tool("nslookup"):
-        ns_result = run_cmd(["nslookup", "-type=any", target], dns_timeout)
+        ns_result = run_cmd(["nslookup", "-type=any", target, *custom_args(preset, "nslookup")], dns_timeout)
         add_extra(report, "DNS Tools", "nslookup", ns_result, summarize_nslookup(ns_result.stdout, ns_result.stderr))
     else:
         add_extra(report, "DNS Tools", "nslookup", CmdResult(["nslookup"], False, missing=True, stderr="nslookup not found"), [])
@@ -146,7 +151,7 @@ def scan_nmap(target: str, timeout: int, report: ReconReport, ports: str | None,
             args.extend(["-p", ports])
         else:
             args.extend(["--top-ports", "1000"])
-        args.extend([*nmap_common_args("T4", 2, "75s", preset), target])
+        args.extend([*nmap_common_args("T4", 2, "75s", preset), *custom_args(preset, "nmap"), target])
         result = run_cmd(args, effective_timeout)
         report.commands.append(command_record(result))
         if result.missing:
@@ -161,13 +166,13 @@ def scan_nmap(target: str, timeout: int, report: ReconReport, ports: str | None,
             report.notes.append(f"nmap deep note: {result.stderr[:180]}")
         fallback_ports = ports or FAST_PORTS
         fallback_timeout = max(30, min(effective_timeout, 60))
-        fallback_args = ["nmap", "-n", "-oN", "-", "-Pn", *nmap_common_args("T3", 3, f"{fallback_timeout}s", preset), "--open", "-p", fallback_ports, target]
+        fallback_args = ["nmap", "-n", "-oN", "-", "-Pn", *nmap_common_args("T3", 3, f"{fallback_timeout}s", preset), "--open", "-p", fallback_ports, *custom_args(preset, "nmap"), target]
         fallback = run_cmd(fallback_args, effective_timeout)
         report.commands.append(command_record(fallback))
         discovered = parse_nmap(fallback.stdout)
         open_ports = [item["port"].split("/", 1)[0] for item in discovered if item["state"] == "open"]
         if open_ports:
-            service_args = ["nmap", "-n", "-oN", "-", "-sV", "--version-light", "-Pn", *nmap_common_args("T3", 2, f"{fallback_timeout}s", preset), "-p", ",".join(open_ports), target]
+            service_args = ["nmap", "-n", "-oN", "-", "-sV", "--version-light", "-Pn", *nmap_common_args("T3", 2, f"{fallback_timeout}s", preset), "-p", ",".join(open_ports), *custom_args(preset, "nmap"), target]
             service = run_cmd(service_args, effective_timeout)
             report.commands.append(command_record(service))
             report.nmap_ports = parse_nmap(service.stdout) or discovered
@@ -180,7 +185,7 @@ def scan_nmap(target: str, timeout: int, report: ReconReport, ports: str | None,
     selected_ports = ports or PROFILE_PORTS.get(report.profile, FAST_PORTS)
     effective_timeout = max(10, timeout)
     discovery_timeout = max(10, min(effective_timeout - 5, 30))
-    discovery_args = ["nmap", "-n", "-oN", "-", "-Pn", *nmap_common_args("T4", 1, f"{discovery_timeout}s", preset), "--open", "-p", selected_ports, target]
+    discovery_args = ["nmap", "-n", "-oN", "-", "-Pn", *nmap_common_args("T4", 1, f"{discovery_timeout}s", preset), "--open", "-p", selected_ports, *custom_args(preset, "nmap"), target]
     discovery = run_cmd(discovery_args, effective_timeout)
     report.commands.append(command_record(discovery))
     if discovery.missing:
@@ -190,7 +195,7 @@ def scan_nmap(target: str, timeout: int, report: ReconReport, ports: str | None,
     open_ports = [item["port"].split("/", 1)[0] for item in parse_nmap(discovery.stdout) if item["state"] == "open"]
     if not open_ports and not ports and report.profile == "fast":
         fallback_timeout = max(15, min(effective_timeout - 5, 45))
-        fallback_args = ["nmap", "-n", "-oN", "-", "-Pn", *nmap_common_args("T3", 3, f"{fallback_timeout}s", preset), "--open", "-p", WEB_FALLBACK_PORTS, target]
+        fallback_args = ["nmap", "-n", "-oN", "-", "-Pn", *nmap_common_args("T3", 3, f"{fallback_timeout}s", preset), "--open", "-p", WEB_FALLBACK_PORTS, *custom_args(preset, "nmap"), target]
         fallback = run_cmd(fallback_args, effective_timeout)
         report.commands.append(command_record(fallback))
         fallback_ports = [item["port"].split("/", 1)[0] for item in parse_nmap(fallback.stdout) if item["state"] == "open"]
@@ -204,7 +209,7 @@ def scan_nmap(target: str, timeout: int, report: ReconReport, ports: str | None,
         report.notes.append("nmap discovery found no open ports in the selected port set. Try --mode balanced or -p 80,443,8080,8443.")
         return
 
-    service_args = ["nmap", "-n", "-oN", "-", "-sV", "--version-light", "-Pn", *nmap_common_args("T4", 1, f"{discovery_timeout}s", preset), "-p", ",".join(open_ports), target]
+    service_args = ["nmap", "-n", "-oN", "-", "-sV", "--version-light", "-Pn", *nmap_common_args("T4", 1, f"{discovery_timeout}s", preset), "-p", ",".join(open_ports), *custom_args(preset, "nmap"), target]
     service = run_cmd(service_args, effective_timeout)
     report.commands.append(command_record(service))
     report.nmap_ports = parse_nmap(service.stdout) or parse_nmap(discovery.stdout)
@@ -243,31 +248,31 @@ def scan_web_stack(report: ReconReport, timeout: int, aggressive: bool, preset: 
         return
 
     if which_tool("whatweb"):
-        result = run_cmd(["whatweb", "--color=never", "--no-errors", "--log-brief=-", *urls[:6]], timeout)
+        result = run_cmd(["whatweb", "--color=never", "--no-errors", "--log-brief=-", *custom_args(preset, "whatweb"), *urls[:6]], timeout)
         add_extra(report, "Web Fingerprint", "whatweb", result, summarize_whatweb(result.stdout))
     else:
         add_extra(report, "Web Fingerprint", "whatweb", CmdResult(["whatweb"], False, missing=True, stderr="whatweb not found"), [])
 
     httpx_bin = which_tool("httpx") or which_tool("httpx-toolkit")
     if httpx_bin:
-        result = run_cmd([httpx_bin, "-silent", "-title", "-tech-detect", "-status-code", *httpx_preset_args(preset), "-u", urls[0]], timeout)
+        result = run_cmd([httpx_bin, "-silent", "-title", "-tech-detect", "-status-code", *httpx_preset_args(preset), *custom_args(preset, "httpx"), "-u", urls[0]], timeout)
         add_extra(report, "HTTP Probe", Path(httpx_bin).name, result, first_lines(result.stdout, 8))
     else:
         add_extra(report, "HTTP Probe", "httpx", CmdResult(["httpx"], False, missing=True, stderr="httpx not found"), [])
 
     if which_tool("wafw00f"):
-        result = run_cmd(["wafw00f", "-a", urls[0]], timeout)
+        result = run_cmd(["wafw00f", "-a", urls[0], *custom_args(preset, "wafw00f")], timeout)
         add_extra(report, "WAF Check", "wafw00f", result, summarize_wafw00f(result.stdout))
     else:
         add_extra(report, "WAF Check", "wafw00f", CmdResult(["wafw00f"], False, missing=True, stderr="wafw00f not found"), [])
 
     if aggressive and which_tool("nikto"):
-        result = run_cmd(["nikto", "-nointeractive", "-Tuning", "x", "-host", urls[0]], timeout)
+        result = run_cmd(["nikto", "-nointeractive", "-Tuning", "x", "-host", urls[0], *custom_args(preset, "nikto")], timeout)
         add_extra(report, "Web Baseline", "nikto", result, summarize_nikto(result.stdout))
     elif aggressive:
         add_extra(report, "Web Baseline", "nikto", CmdResult(["nikto"], False, missing=True, stderr="nikto not found"), [])
 
-def scan_tls(report: ReconReport, timeout: int, aggressive: bool) -> None:
+def scan_tls(report: ReconReport, timeout: int, aggressive: bool, preset: str = "standard") -> None:
     tls_targets = []
     for item in report.nmap_ports:
         port = item["port"].split("/", 1)[0]
@@ -279,22 +284,22 @@ def scan_tls(report: ReconReport, timeout: int, aggressive: bool) -> None:
         return
 
     if which_tool("sslscan"):
-        result = run_cmd(["sslscan", "--no-colour", tls_targets[0]], timeout)
+        result = run_cmd(["sslscan", "--no-colour", *custom_args(preset, "sslscan"), tls_targets[0]], timeout)
         interesting = [line.strip() for line in result.stdout.splitlines() if any(token in line for token in ("SSLv", "TLSv", "Subject:", "Issuer:", "Signature Algorithm", "not vulnerable"))]
         add_extra(report, "TLS Check", "sslscan", result, list(dict.fromkeys(interesting))[:8])
     elif which_tool("testssl.sh") and aggressive:
-        result = run_cmd(["testssl.sh", "--fast", "--warnings", "batch", tls_targets[0]], timeout)
+        result = run_cmd(["testssl.sh", "--fast", "--warnings", "batch", *custom_args(preset, "testssl.sh"), tls_targets[0]], timeout)
         add_extra(report, "TLS Check", "testssl.sh", result, first_lines(result.stdout, 12))
     else:
         report.notes.append("sslscan not installed; TLS detail skipped.")
 
 def scan_extra_modules(report: ReconReport, timeout: int, modules: set[str], aggressive: bool, raw_dir: Path | None = None, preset: str = "standard") -> None:
     if "passive" in modules:
-        scan_passive(report, timeout, raw_dir)
+        scan_passive(report, timeout, raw_dir, preset)
     if "dns-tools" in modules:
-        scan_dns_tools(report.normalized_target, timeout, report)
+        scan_dns_tools(report.normalized_target, timeout, report, preset)
     if "dns-deep" in modules:
-        scan_dns_deep(report, timeout, raw_dir)
+        scan_dns_deep(report, timeout, raw_dir, preset)
     if not target_has_scan_endpoint(report):
         skipped = sorted(modules & {"web", "tls", "http-detail", "screenshots", "templates"})
         if skipped:
@@ -305,7 +310,7 @@ def scan_extra_modules(report: ReconReport, timeout: int, modules: set[str], agg
     if "http-detail" in modules:
         scan_http_detail(report, timeout, raw_dir, preset)
     if "tls" in modules:
-        scan_tls(report, timeout, aggressive)
+        scan_tls(report, timeout, aggressive, preset)
     if "screenshots" in modules:
         scan_screenshots(report, timeout, raw_dir, preset)
     if "templates" in modules:
@@ -351,30 +356,30 @@ def save_artifact(report: ReconReport, raw_dir: Path | None, name: str, content:
     report.artifacts[safe_name] = str(path)
 
 
-def scan_passive(report: ReconReport, timeout: int, raw_dir: Path | None = None) -> None:
+def scan_passive(report: ReconReport, timeout: int, raw_dir: Path | None = None, preset: str = "standard") -> None:
     if is_ip(report.normalized_target):
         report.notes.append("Passive subdomain discovery skipped because target is an IP address.")
         return
     if which_tool("subfinder"):
-        result = run_cmd(["subfinder", "-silent", "-d", report.normalized_target], timeout)
+        result = run_cmd(["subfinder", "-silent", "-d", report.normalized_target, *custom_args(preset, "subfinder")], timeout)
         save_artifact(report, raw_dir, "subfinder.txt", result.stdout)
         add_extra(report, "Passive Discovery", "subfinder", result, first_lines(result.stdout, 12))
     else:
         add_extra(report, "Passive Discovery", "subfinder", CmdResult(["subfinder"], False, missing=True, stderr="subfinder not found"), [])
 
     if which_tool("amass"):
-        result = run_cmd(["amass", "enum", "-passive", "-norecursive", "-d", report.normalized_target], timeout)
+        result = run_cmd(["amass", "enum", "-passive", "-norecursive", "-d", report.normalized_target, *custom_args(preset, "amass")], timeout)
         save_artifact(report, raw_dir, "amass-passive.txt", result.stdout)
         add_extra(report, "Passive Discovery", "amass", result, first_lines(result.stdout, 12))
     else:
         add_extra(report, "Passive Discovery", "amass", CmdResult(["amass"], False, missing=True, stderr="amass not found"), [])
 
 
-def scan_dns_deep(report: ReconReport, timeout: int, raw_dir: Path | None = None) -> None:
+def scan_dns_deep(report: ReconReport, timeout: int, raw_dir: Path | None = None, preset: str = "standard") -> None:
     if is_ip(report.normalized_target):
         return
     resolver = report.resolved_ips[0] if report.resolved_ips else report.normalized_target
-    axfr = run_cmd(["dig", "axfr", f"@{resolver}", report.normalized_target], min(timeout, 20))
+    axfr = run_cmd(["dig", "axfr", f"@{resolver}", report.normalized_target, *custom_args(preset, "dig")], min(timeout, 20))
     save_artifact(report, raw_dir, "dig-axfr.txt", axfr.stdout or axfr.stderr)
     summary = first_lines(axfr.stdout or axfr.stderr, 8)
     if axfr.ok and "Transfer failed" not in axfr.stdout and "failed" not in axfr.stdout.lower() and len(axfr.stdout.splitlines()) > 3:
@@ -390,7 +395,7 @@ def scan_http_detail(report: ReconReport, timeout: int, raw_dir: Path | None = N
     for index, url in enumerate(urls[:4], 1):
         if which_tool("curl"):
             curl_timeout = min(timeout, int(preset_config(preset).get("http_timeout", 20)))
-            result = run_cmd(["curl", "-k", "-L", "-I", "--max-time", str(curl_timeout), *curl_preset_args(preset), url], min(timeout, 25))
+            result = run_cmd(["curl", "-k", "-L", "-I", "--max-time", str(curl_timeout), *curl_preset_args(preset), *custom_args(preset, "curl"), url], min(timeout, 25))
             save_artifact(report, raw_dir, f"curl-headers-{index}.txt", result.stdout or result.stderr)
             headers = [line.strip() for line in result.stdout.splitlines() if ":" in line][:10]
             add_extra(report, "HTTP Headers", "curl", result, headers or first_lines(result.stdout or result.stderr, 8))
@@ -398,7 +403,7 @@ def scan_http_detail(report: ReconReport, timeout: int, raw_dir: Path | None = N
             add_extra(report, "HTTP Headers", "curl", CmdResult(["curl"], False, missing=True, stderr="curl not found"), [])
             break
     if which_tool("katana"):
-        result = run_cmd(["katana", "-silent", "-no-color", *katana_preset_args(preset), "-u", urls[0]], min(timeout, 45))
+        result = run_cmd(["katana", "-silent", "-no-color", *katana_preset_args(preset), *custom_args(preset, "katana"), "-u", urls[0]], min(timeout, 45))
         save_artifact(report, raw_dir, "katana-depth1.txt", result.stdout)
         add_extra(report, "HTTP Crawl", "katana", result, first_lines(result.stdout, 12))
     else:
@@ -414,7 +419,7 @@ def scan_screenshots(report: ReconReport, timeout: int, raw_dir: Path | None = N
         return
     out_dir = (raw_dir or Path("recon-artifacts")) / "screenshots"
     out_dir.mkdir(parents=True, exist_ok=True)
-    result = run_cmd(["gowitness", "scan", "single", "--url", urls[0], "--screenshot-path", str(out_dir)], min(timeout, 60))
+    result = run_cmd(["gowitness", "scan", "single", "--url", urls[0], "--screenshot-path", str(out_dir), *custom_args(preset, "gowitness")], min(timeout, 60))
     save_artifact(report, raw_dir, "gowitness.txt", result.stdout or result.stderr)
     add_extra(report, "Screenshots", "gowitness", result, first_lines(result.stdout or result.stderr, 8))
 
@@ -426,6 +431,6 @@ def scan_templates(report: ReconReport, timeout: int, raw_dir: Path | None = Non
     if not which_tool("nuclei"):
         add_extra(report, "Template Checks", "nuclei", CmdResult(["nuclei"], False, missing=True, stderr="nuclei not found"), [])
         return
-    result = run_cmd(["nuclei", "-silent", "-no-color", *nuclei_preset_args(preset), "-u", urls[0]], min(timeout, 90))
+    result = run_cmd(["nuclei", "-silent", "-no-color", *nuclei_preset_args(preset), *custom_args(preset, "nuclei"), "-u", urls[0]], min(timeout, 90))
     save_artifact(report, raw_dir, "nuclei.txt", result.stdout or result.stderr)
     add_extra(report, "Template Checks", "nuclei", result, first_lines(result.stdout or result.stderr, 12))
