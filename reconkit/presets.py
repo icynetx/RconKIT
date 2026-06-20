@@ -151,19 +151,38 @@ def list_preset_rows() -> list[list[str]]:
     return rows
 
 
-def prompt_create_preset(name: str, base: str = "standard", strategy: str = "append") -> dict[str, object]:
-    print(f"[+] Creating preset: {name}")
-    print(f"[*] Base preset: {base}")
-    description = input("Description (optional): ").strip()
+def prompt_create_preset(name: str | None = None, base: str = "standard", strategy: str = "append") -> dict[str, object]:
+    print("[+] ReconKit custom preset wizard")
+    while not name:
+        raw_name = input("Preset name: ").strip()
+        try:
+            name = validate_preset_name(raw_name)
+        except ValueError as exc:
+            print(f"[!] {exc}")
+            name = None
+    name = validate_preset_name(name)
+
+    raw_base = input(f"Base preset quick/standard/full/web/vuln [{base}]: ").strip().lower()
+    if raw_base:
+        base = raw_base
+    if base not in BUILTIN_PRESET_NAMES:
+        raise ValueError(f"Base preset must be one of: {', '.join(BUILTIN_PRESET_NAMES)}")
+
     raw_strategy = input(f"Mode append/replace/only [{strategy}]: ").strip().lower()
     if raw_strategy:
         strategy = raw_strategy
     if strategy not in PRESET_STRATEGIES:
         raise ValueError(f"Preset strategy must be one of: {', '.join(PRESET_STRATEGIES)}")
-    print("\nEnter extra arguments for each tool. Leave blank to skip.")
-    print("Example: nmap => --reason --top-ports 1000")
-    print("Tip: append adds to defaults; replace uses your args for configured tools; only skips tools not configured in the preset.")
-    print("Tip: in replace mode you can use placeholders: {target}, {url}, {domain}, {out_dir}\n")
+
+    description = input("Description (optional): ").strip()
+    print("\nEnter custom arguments for each tool. Leave blank to skip that tool.")
+    print("Examples:")
+    print("  nmap  => -sV -sC -Pn -p 80,443 -oN - {target}")
+    print("  httpx => -silent -title -status-code -u {url}")
+    print("  nuclei => -silent -tags cves -u {url}")
+    print("Placeholders: {target}, {domain}, {url}, {out_dir}")
+    print("Modes: append adds to defaults, replace replaces configured tools, only runs configured tools.\n")
+
     tool_args: dict[str, list[str]] = {}
     for tool in PRESET_TOOLS:
         while True:
@@ -176,4 +195,8 @@ def prompt_create_preset(name: str, base: str = "standard", strategy: str = "app
                 print(f"[!] {exc}")
         if args:
             tool_args[tool] = args
-    return create_preset(name, base, tool_args, description, strategy)
+
+    if not tool_args:
+        raise ValueError("Preset must include custom args for at least one tool")
+    preset = create_preset(name, base, tool_args, description, strategy)
+    return {"name": name, **preset}

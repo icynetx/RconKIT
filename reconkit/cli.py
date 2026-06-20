@@ -85,7 +85,7 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
     parser.add_argument("--scan-preset", default="standard", help="scan preset: built-in quick/standard/full/web/vuln or a saved custom preset")
     parser.add_argument("--preset-list", action="store_true", help="list built-in and saved scan presets")
     parser.add_argument("--preset-show", metavar="NAME", help="show a saved scan preset")
-    parser.add_argument("--preset-create", metavar="NAME", help="interactively create a saved scan preset")
+    parser.add_argument("--preset-create", nargs="?", const="", metavar="NAME", help="create a saved scan preset; omit NAME to enter it in the wizard")
     parser.add_argument("--preset-base", choices=("quick", "standard", "full", "web", "vuln"), default="standard", help="base preset for --preset-create/--preset-add")
     parser.add_argument("--preset-strategy", choices=("append", "replace", "only"), default="append", help="custom preset mode: append defaults, replace configured tools, or run only configured preset tools")
     parser.add_argument("--preset-add", action="append", default=[], metavar="TOOL=ARGS", help="create/update preset non-interactively; repeat, e.g. nmap='--reason'")
@@ -197,19 +197,23 @@ def main(argv: list[str] | None = None) -> int:
         except (ValueError, OSError, json.JSONDecodeError) as exc:
             print(color(f"Preset error: {exc}", C.RED, colorize), file=sys.stderr)
             return 2
-    if args.preset_create:
+    if args.preset_create is not None:
         try:
+            saved_name = args.preset_create or ""
             if args.preset_add:
+                if not saved_name:
+                    raise ValueError("Preset name is required when using --preset-add. Use --preset-create NAME --preset-add TOOL=ARGS")
                 tool_args = {}
                 for item in args.preset_add:
                     if "=" not in item:
                         raise ValueError(f"Invalid --preset-add value: {item}. Use TOOL=ARGS")
                     tool, raw = item.split("=", 1)
                     tool_args[tool.strip()] = raw
-                create_preset(args.preset_create, args.preset_base, tool_args, args.preset_desc, args.preset_strategy)
+                create_preset(saved_name, args.preset_base, tool_args, args.preset_desc, args.preset_strategy)
             else:
-                prompt_create_preset(args.preset_create, args.preset_base, args.preset_strategy)
-            print(color(f"[+] Saved preset: {args.preset_create}", C.GREEN, colorize))
+                created = prompt_create_preset(saved_name or None, args.preset_base, args.preset_strategy)
+                saved_name = str(created.get("name", saved_name or "custom"))
+            print(color(f"[+] Saved preset: {saved_name}", C.GREEN, colorize))
             return 0
         except (ValueError, OSError, json.JSONDecodeError) as exc:
             print(color(f"Preset error: {exc}", C.RED, colorize), file=sys.stderr)
