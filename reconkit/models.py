@@ -30,6 +30,8 @@ class Finding:
     confidence: str = "medium"
 
 
+
+
 @dataclass
 class ReconReport:
     target: str

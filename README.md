@@ -97,6 +97,9 @@ reconkit(example.com)> exit
 reconkit example.com
 reconkit example.com --deep --ai --ai-out ai-report.md -o scan.json -t 120
 reconkit example.com --mission --raw-dir artifacts -o scan.json --markdown report.md --html report.html
+
+# Pick a clear scan preset instead of memorizing tool flags
+reconkit example.com --mission --scan-preset full
 ```
 
 ---
@@ -286,6 +289,29 @@ reconkit example.com --mission
 
 ---
 
+## 🎛️ Scan Presets
+
+ReconKit keeps the CLI simple. Instead of exposing dozens of low-level flags, use one clear preset and let ReconKit tune `nmap`, `httpx`, `nuclei`, and `katana` for that workflow.
+
+| Preset | Best for | What it changes |
+|---|---|---|
+| `quick` | Fast first look | Faster nmap/http probing, shallow web checks. |
+| `standard` | Default recon | Balanced settings for normal external assessment. |
+| `full` | Longer assessment | More patient retries/timeouts, deeper web crawl. |
+| `web` | Web-focused checks | Web tooling gets more time and crawl depth. |
+| `vuln` | Template checks | Nuclei/http checks use conservative concurrency and retries. |
+
+Examples:
+
+```bash
+reconkit example.com --scan-preset quick
+reconkit example.com --mission --scan-preset full
+reconkit example.com -M web,http-detail --scan-preset web
+reconkit example.com --templates --scan-preset vuln
+```
+
+---
+
 ## 🧾 All CLI Switches
 
 | Switch | Example | Explanation |
@@ -308,6 +334,7 @@ reconkit example.com --mission
 | `--http-detail` | `--http-detail` | Adds HTTP headers and shallow crawl. |
 | `--screenshots` | `--screenshots` | Captures screenshot with `gowitness` when installed. |
 | `--templates`, `--nuclei` | `--templates` | Runs nuclei templates when installed and authorized. |
+| `--scan-preset` | `--scan-preset full` | Simple preset: `quick`, `standard`, `full`, `web`, `vuln`. |
 | `--cmd`, `--show-commands` | `--cmd` | Shows exact commands ReconKit executed. |
 | `--explain` | `--explain` | Shows a switch guide in the scan output. |
 | `--no-color` | `--no-color` | Disables ANSI colors. Useful for CI/log files. |

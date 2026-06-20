@@ -28,7 +28,7 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
             Simple examples:
               python3 recon.py example.com
               python3 recon.py example.com -m balanced --cmd
-              python3 recon.py example.com -p 80,443,8080 -M web,tls
+              python3 recon.py example.com -p 80,443,8080 -M web,tls --scan-preset web
               python3 recon.py example.com --mission --raw-dir artifacts -o scan.json --html report.html
               python3 recon.py example.com -m deep -t 180 -A --explain
               python3 recon.py 1.1.1.1 --no-whois -o report.json
@@ -81,6 +81,7 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
     parser.add_argument("--http-detail", action="store_true", help="add curl header checks and shallow crawl when tools exist")
     parser.add_argument("--screenshots", action="store_true", help="capture a screenshot with gowitness when installed")
     parser.add_argument("--templates", "--nuclei", dest="templates", action="store_true", help="run nuclei templates when installed and authorized")
+    parser.add_argument("--scan-preset", choices=("quick", "standard", "full", "web", "vuln"), default="standard", help="simple scan preset: quick, standard, full, web, vuln")
     parser.add_argument("--cmd", "--show-commands", dest="show_commands", action="store_true", help="show exact commands")
     parser.add_argument("--explain", action="store_true", help="show switch guide in output")
     parser.add_argument("--no-color", action="store_true", help="disable colors")
@@ -244,13 +245,13 @@ def main(argv: list[str] | None = None) -> int:
 
     if target_has_scan_endpoint(report):
         status(f"Launching nmap mode: {mode}", colorize=colorize)
-        scan_nmap(target, max(10, args.timeout), report, args.ports, mode == "deep")
+        scan_nmap(target, max(10, args.timeout), report, args.ports, mode == "deep", args.scan_preset)
     else:
         status("Skipping nmap: target did not resolve to an IP", colorize=colorize)
 
     if modules:
         status(f"Running extra modules: {','.join(sorted(modules))}", colorize=colorize)
-        scan_extra_modules(report, max(10, args.timeout), modules, args.aggressive, args.raw_dir)
+        scan_extra_modules(report, max(10, args.timeout), modules, args.aggressive, args.raw_dir, args.scan_preset)
 
     if not args.no_whois:
         status("Pulling WHOIS summary", colorize=colorize)

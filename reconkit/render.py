@@ -122,6 +122,7 @@ def render_switch_guide(*, colorize: bool = True) -> str:
         ["-A", "Aggressive safe extras: enables optional heavier checks like nikto/testssl."],
         ["-M safe", "Extra modules. Use none, dns, dns-deep, passive, web, http, tls, screenshots, templates, safe, all, full, mission."],
         ["--mission", "Enable passive discovery, DNS deep checks, HTTP detail, TLS, screenshots, and nuclei if installed."],
+        ["--scan-preset", "Simple tool behavior: quick, standard, full, web, vuln."],
         ["--raw-dir", "Save raw tool evidence such as headers/subdomains/template output."],
         ["--html", "Save a standalone HTML report."],
         ["--markdown", "Save a Markdown report."],
