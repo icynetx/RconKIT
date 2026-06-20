@@ -27,12 +27,12 @@
 
 <p align="center">
   <a href="https://youtu.be/SHGSs4-qw9Y">
-    <img src="https://img.youtube.com/vi/SHGSs4-qw9Y/maxresdefault.jpg" alt="YouTube DEMO" width="760">
+    <img src="https://img.youtube.com/vi/SHGSs4-qw9Y/maxresdefault.jpg" alt="مشاهده ویدیوی ReconKit در یوتیوب" width="760">
   </a>
 </p>
 
 <p align="center">
-  <a href="https://youtu.be/SHGSs4-qw9Y"><img alt="YT" src="https://img.shields.io/badge/YouTubedemo-FF0000?style=for-the-badge&logo=youtube&logoColor=white"></a>
+  <a href="https://youtu.be/SHGSs4-qw9Y"><img alt="Watch on YouTube" src="https://img.shields.io/badge/Watch_on_YouTube-ReconKit_Demo-FF0000?style=for-the-badge&logo=youtube&logoColor=white"></a>
 </p>
 
 > ‏راهنمای فارسی یا انگلیسی را انتخاب کن، بعد اگر خواستی قبل از نصب حس واقعی ابزار را ببینی، ویدیوی یوتیوب را ببین؛ داخل ویدیو ReconKit را معرفی کردیم، اجرا کردیم و خروجی واقعی اسکن و گزارش را نشان دادیم.
@@ -328,7 +328,7 @@ reconkit(example.com)> exit
 | ‏`balanced` | ‏`reconkit example.com -m balanced` | ‏بررسی متعادل‌تر با پوشش بیشتر |
 | ‏`deep` | ‏`reconkit example.com -m deep` | ‏بررسی عمیق‌تر با service/version/default scripts در nmap |
 
-### ‏مثال‌ها
+### ‏مثال‌های حالت اسکن
 
 ```bash
 reconkit example.com -m fast
@@ -360,7 +360,7 @@ reconkit example.com --deep
 | ‏`full` | ‏all + screenshots + templates |
 | ‏`mission` | ‏مثل full، مناسب workflow کامل |
 
-### ‏مثال‌ها
+### ‏مثال‌های ماژول
 
 ```bash
 reconkit example.com -M none
@@ -394,7 +394,7 @@ reconkit example.com --templates
 | ‏`web` | ‏تمرکز بیشتر روی وب |
 | ‏`vuln` | ‏مناسب template check با nuclei و بررسی محافظه‌کارانه‌تر |
 
-### ‏مثال‌ها
+### ‏مثال‌های preset آماده
 
 ```bash
 reconkit example.com --scan-preset quick
