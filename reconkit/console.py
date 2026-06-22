@@ -27,30 +27,52 @@ class ConsoleState:
 
 
 HELP_ROWS = [
-    ["help / ?", "Show console commands."],
+    ["help / ?", "Show this command list."],
     ["version", "Show ReconKit version and Team CynetX links."],
     ["show options", "Show current scan settings."],
     ["show modules", "Show module presets and examples."],
-    ["show deps", "Check installed tools."],
+    ["show deps", "Check installed required/optional tools."],
+    ["show tools", "Alias for show deps."],
     ["show ai", "Show AI endpoint/model/config safely."],
+    ["ai init", "Create/update recon_config.json with default AI settings."],
+    ["ai show", "Show AI config without exposing the full API key."],
+    ["ai prompt", "Print the active AI system prompt."],
     ["ai set model openrouter/free", "Set and save an AI config value."],
+    ["ai set endpoint_url URL", "Set and save the AI endpoint URL."],
     ["ai set-file system_prompt prompt.txt", "Load a config value from a file."],
+    ["test ai", "Test configured AI endpoint/API key."],
     ["set target example.com", "Set the target domain/IP/URL."],
     ["set mode fast|balanced|deep", "Choose nmap scan profile."],
     ["set modules safe|all|mission", "Choose extra ReconKit modules."],
     ["set ports 80,443,8080", "Set custom ports; use unset ports to clear."],
+    ["set timeout 120", "Set per-tool timeout in seconds."],
+    ["set raw_dir artifacts", "Set artifact/raw-output directory."],
+    ["set json scan.json", "Set JSON report path; use unset json to disable."],
+    ["set markdown report.md", "Set Markdown report path."],
+    ["set html report.html", "Set HTML report path."],
+    ["set extra --scan-preset mypreset --cmd", "Pass any supported CLI switches to the next run."],
+    ["unset ports|raw_dir|json|markdown|html|extra", "Clear an optional setting."],
     ["enable ai", "Enable AI analysis for the next run."],
-    ["disable ai", "Disable AI analysis."],
-    ["run", "Run scan with current settings."],
+    ["enable aggressive", "Enable heavier optional checks when tools exist."],
+    ["enable no_whois", "Skip WHOIS for the next run."],
+    ["enable show_commands", "Print exact tool commands during output."],
+    ["disable ai|aggressive|no_whois|show_commands", "Turn an enabled flag off."],
+    ["run / scan", "Run scan with current settings."],
     ["quick example.com", "Fast safe scan immediately."],
-    ["mission example.com", "Full mission scan with reports/artifacts."],
+    ["mission example.com", "Mission scan with reports/artifacts."],
     ["install", "Install required + optional tools best-effort."],
+    ["dryrun", "Show dependency install commands without installing."],
+    ["web", "Start local web panel on 127.0.0.1:8080."],
+    ["serve", "Alias for web."],
+    ["web 0.0.0.0 8080", "Start web panel on a custom host/port."],
     ["uninstall", "Remove the reconkit command launcher."],
+    ["uninstall dryrun", "Preview uninstall actions without removing files."],
     ["uninstall purge", "Remove command plus local ReconKit config/install directory."],
-    ["test ai", "Test configured AI endpoint/API key."],
-    ["shell <command>", "Run a local shell command."],
+    ["shell <command>", "Run a local shell command from the console."],
+    ["clear", "Clear the screen and redraw the console banner."],
     ["exit / quit", "Leave the console."],
 ]
+
 
 MODULE_ROWS = [
     ["safe", "DNS tools + web fingerprint + TLS checks."],
@@ -271,6 +293,10 @@ def handle_command(line: str, state: ConsoleState, *, colorize: bool = True) -> 
             run_main(build_scan_args(state))
         elif command == "install":
             run_main(["--install-deps", "--with-optional"])
+        elif command in {"web", "serve"}:
+            host = rest[0] if len(rest) >= 1 else "127.0.0.1"
+            port = rest[1] if len(rest) >= 2 else "8080"
+            run_main(["--web", "--host", host, "--port", port])
         elif command == "uninstall":
             uninstall_args = ["--uninstall"]
             if rest[:1] == ["purge"]:

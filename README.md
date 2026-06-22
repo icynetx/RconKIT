@@ -141,6 +141,9 @@ reconkit example.com --mission --scan-preset full
 # Build your own guided preset once, then reuse it
 reconkit --preset-create
 reconkit example.com --scan-preset mypreset --cmd
+
+# Open the local web panel
+reconkit --web
 ```
 
 ---
@@ -176,6 +179,8 @@ Run `reconkit` with no arguments and you get a guided console instead of a wall 
 | `quick example.com` | Runs a fast safe scan immediately. |
 | `mission example.com` | Runs the full mission workflow. |
 | `install` | Installs required + optional tools best-effort. |
+| `web` | Starts the local web panel on `127.0.0.1:8080`. |
+| `web 0.0.0.0 8080` | Starts the web panel on a custom host/port. |
 | `uninstall` | Removes the installed `reconkit` command launcher. |
 | `uninstall purge` | Removes command plus local ReconKit config/install directory when safe. |
 | `dryrun` | Shows dependency install plan without installing. |
@@ -516,6 +521,9 @@ Supported custom-argument tools:
 | `--with-optional` | `--install-deps --with-optional` | Also install optional recon/web/TLS tools. |
 | `--dry-run` | `--install-deps --dry-run` | Print install plan without installing. |
 | `--check-deps` | `--check-deps` | Print dependency status and exit. |
+| `--web`, `--serve` | `--web` | Start the local ReconKit web panel. |
+| `--host` | `--web --host 0.0.0.0` | Host/interface for the web panel. Default: `127.0.0.1`. |
+| `--port` | `--web --port 8080` | TCP port for the web panel. Default: `8080`. |
 | `--uninstall` | `--uninstall` | Remove the installed `reconkit` command launcher. |
 | `--purge` | `--uninstall --purge` | Also remove local config/presets and `~/.reconkit` install directory when safe. |
 | `--ai` | `--ai` | Analyze scan results using `recon_config.json`. |
@@ -618,6 +626,49 @@ AI output structure:
 8. Data Quality Notes
 
 > The AI mode is designed for defensive analysis: it explains exposure, likely risk, safe validation ideas, and hardening steps — without exploit payloads, brute-force instructions, malware, persistence, or evasion.
+
+
+---
+
+## 🖥️ Local Web Panel
+
+ReconKit also includes a built-in local web panel. It uses Python's standard library web server, so no Flask/FastAPI dependency is required.
+
+Start it locally:
+
+```bash
+reconkit --web
+```
+
+Open:
+
+```text
+http://127.0.0.1:8080
+```
+
+Run on a server or custom interface/port:
+
+```bash
+reconkit --web --host 0.0.0.0 --port 8080
+```
+
+Inside the interactive console:
+
+```text
+reconkit(no-target)> web
+reconkit(no-target)> web 0.0.0.0 8080
+```
+
+The web panel supports:
+
+- Starting scans with target, mode, modules, ports, preset, timeout, AI, raw artifacts, and command display options.
+- Viewing scan history and opening previous reports.
+- Downloading JSON, Markdown, and HTML reports.
+- Creating, listing, and deleting custom presets.
+- Checking dependencies and starting dependency installation.
+- Viewing/editing AI config and testing the AI endpoint.
+
+> Security note: keep the panel bound to `127.0.0.1` unless you intentionally run it on a trusted server/network. It is an operator panel, not a public web app.
 
 ---
 

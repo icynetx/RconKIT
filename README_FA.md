@@ -68,6 +68,7 @@
 - ‏[ماژول‌ها](#ماژولها)
 - ‏[Scan Presetها](#scan-presetها)
 - ‏[ساخت Preset سفارشی](#ساخت-preset-سفارشی)
+- ‏[پنل وب لوکال](#پنل-وب-لوکال)
 - ‏[گزارش‌ها و خروجی‌ها](#گزارشها-و-خروجیها)
 - ‏[هوش مصنوعی OpenRouter](#هوش-مصنوعی-openrouter)
 - ‏[نصب ابزارهای جانبی](#نصب-ابزارهای-جانبی)
@@ -303,6 +304,8 @@ reconkit(example.com)> exit
 | ‏`quick example.com` | ‏اسکن سریع همان لحظه |
 | ‏`mission example.com` | ‏اجرای workflow کامل mission |
 | ‏`install` | ‏نصب ابزارهای required + optional |
+| ‏`web` | ‏اجرای پنل وب روی `127.0.0.1:8080` |
+| ‏`web 0.0.0.0 8080` | ‏اجرای پنل وب روی host/port دلخواه |
 | ‏`uninstall` | ‏حذف command نصب‌شده `reconkit` |
 | ‏`uninstall purge` | ‏حذف command به همراه config/presetها و پوشه نصب محلی وقتی امن باشد |
 | ‏`dryrun` | ‏نمایش برنامه نصب بدون نصب واقعی |
@@ -544,6 +547,49 @@ reconkit --preset-delete myweb
 nmap, dig, host, nslookup, whois, whatweb, httpx, wafw00f, nikto,
 sslscan, testssl.sh, subfinder, amass, curl, katana, gowitness, nuclei
 ```
+
+
+---
+
+## ‏پنل وب لوکال
+
+‏ReconKit یک پنل وب داخلی هم دارد تا بتوانی روی سیستم خودت یا سرور، ابزار را از مرورگر کنترل کنی. این پنل با کتابخانه‌های استاندارد Python اجرا می‌شود و به Flask/FastAPI نیاز ندارد.
+
+‏اجرای ساده روی سیستم لوکال:
+
+```bash
+reconkit --web
+```
+
+‏بعد در مرورگر باز کن:
+
+```text
+http://127.0.0.1:8080
+```
+
+‏اجرای روی سرور یا host/port دلخواه:
+
+```bash
+reconkit --web --host 0.0.0.0 --port 8080
+```
+
+‏از داخل کنسول تعاملی:
+
+```text
+reconkit(no-target)> web
+reconkit(no-target)> web 0.0.0.0 8080
+```
+
+‏داخل پنل وب می‌توانی این کارها را انجام بدهی:
+
+- ‏شروع scan با target، mode، module، port، preset، timeout، AI و raw artifacts
+- ‏دیدن history اسکن‌ها و باز کردن گزارش‌های قبلی
+- ‏دانلود خروجی‌های JSON، Markdown و HTML
+- ‏ساخت، مشاهده و حذف preset سفارشی
+- ‏بررسی وضعیت dependencyها و شروع نصب ابزارها
+- ‏دیدن/ویرایش تنظیمات AI و تست endpoint هوش مصنوعی
+
+> ‏نکته امنیتی: تا وقتی واقعاً لازم نداری، پنل را روی `127.0.0.1` نگه دار. اگر با `0.0.0.0` روی سرور اجرا می‌کنی، فقط روی شبکه/سرور قابل اعتماد استفاده کن. این پنل برای اپراتور است، نه یک وب‌اپ عمومی.
 
 ---
 
@@ -802,6 +848,9 @@ reconkit(no-target)> uninstall purge
 | ‏`--with-optional` | ‏`--install-deps --with-optional` | ‏نصب ابزارهای optional هم انجام شود |
 | ‏`--dry-run` | ‏`--install-deps --dry-run` | ‏فقط نمایش برنامه نصب بدون اجرا |
 | ‏`--check-deps` | ‏`--check-deps` | ‏بررسی وضعیت ابزارها |
+| ‏`--web`, `--serve` | ‏`--web` | ‏اجرای پنل وب لوکال |
+| ‏`--host` | ‏`--web --host 0.0.0.0` | ‏host/interface پنل وب؛ پیش‌فرض `127.0.0.1` |
+| ‏`--port` | ‏`--web --port 8080` | ‏پورت پنل وب؛ پیش‌فرض `8080` |
 | ‏`--uninstall` | ‏`--uninstall` | ‏حذف command نصب‌شده `reconkit` |
 | ‏`--purge` | ‏`--uninstall --purge` | ‏همراه با uninstall، config/presetها و پوشه نصب محلی را هم حذف می‌کند وقتی امن باشد |
 | ‏`--ai` | ‏`--ai` | ‏فعال کردن تحلیل AI بعد از اسکن |

@@ -26,27 +26,55 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
         description=color(f"{APP} v{VERSION} by {AUTHOR} - {TAGLINE}", C.BOLD + C.CYAN, supports_color(sys.stdout)),
         epilog=textwrap.dedent(
             """
-            Simple examples:
-              python3 recon.py example.com
-              python3 recon.py example.com -m balanced --cmd
-              python3 recon.py example.com -p 80,443,8080 -M web,tls --scan-preset web
-              python3 recon.py example.com --mission --raw-dir artifacts -o scan.json --html report.html
-              python3 recon.py example.com -m deep -t 180 -A --explain
-              python3 recon.py 1.1.1.1 --no-whois -o report.json
-              python3 recon.py --self-install --user        # install reconkit command only
+            Quick scan examples:
+              reconkit                                # open the interactive console
+              reconkit example.com                    # fast scan with safe modules
+              reconkit example.com -m balanced --cmd
+              reconkit example.com -p 80,443,8080 -M web,tls --scan-preset web
+              reconkit example.com --mission --raw-dir artifacts -o scan.json --html report.html
+              reconkit example.com -m deep -t 180 -A --explain
+              reconkit 1.1.1.1 --no-whois -o report.json
+
+            Web panel:
+              reconkit --web
+              reconkit --serve --host 127.0.0.1 --port 8080
+              reconkit --web --host 0.0.0.0 --port 8080      # trusted server/network only
+
+            Install, update helpers, and uninstall:
+              python3 recon.py --self-install --user         # install reconkit command only
               python3 recon.py --self-install --install-deps --with-optional
               reconkit --install-deps --with-optional
+              reconkit --install-deps --with-optional --dry-run
+              reconkit --check-deps
+              reconkit --uninstall --dry-run
+              reconkit --uninstall
+              reconkit --uninstall --purge                  # also removes local config/presets/install dir when safe
+
+            Presets:
+              reconkit --preset-list
+              reconkit --preset-show standard
+              reconkit --preset-create                      # guided wizard
+              reconkit --preset-create myweb --preset-strategy only --preset-add 'nmap=-sV -Pn -p 80,443 {target}'
+              reconkit --preset-delete myweb
+              reconkit example.com --scan-preset myweb --cmd
+
+            AI config and testing:
               reconkit --ai-init
               reconkit --ai-show
+              reconkit --ai-prompt
               reconkit --ai-set model=openrouter/free --ai-set endpoint_url=https://openrouter.ai/api/v1/chat/completions
               reconkit --ai-set-file system_prompt=prompt.txt
-              OPENROUTER_API_KEY=sk-or-... python3 recon.py example.com --ai
-              python3 recon.py --test-ai
-              reconkit                                # opens interactive console
-              reconkit example.com                    # direct one-shot scan
+              OPENROUTER_API_KEY=sk-or-... reconkit example.com --ai --ai-out ai-report.md
+              reconkit --test-ai
 
             Console commands after running reconkit:
-              help, show options, set target example.com, set mode deep, run, mission example.com, install, test ai, exit
+              help / ?, version, show options, show modules, show deps, show tools, show ai,
+              set target example.com, set mode deep, set modules mission, set ports 80,443,
+              set extra --scan-preset mypreset --cmd, unset ports, enable ai, disable ai,
+              run, quick example.com, mission example.com, install, dryrun,
+              web, serve, web 0.0.0.0 8080, uninstall, uninstall dryrun, uninstall purge,
+              ai init, ai show, ai prompt, ai set model openrouter/free,
+              ai set-file system_prompt prompt.txt, test ai, shell <command>, clear, exit.
 
             Modes:
               fast      Default. Quick and good-looking output.
@@ -58,6 +86,11 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
               all       Adds passive discovery, DNS AXFR validation, and HTTP detail.
               mission   Adds screenshots and nuclei template checks when installed.
               -A        Adds heavier optional checks such as nikto/testssl when available.
+
+            Preset strategies:
+              append    Add custom tool switches after ReconKit defaults.
+              replace   Replace defaults only for tools configured in the preset.
+              only      Run only tools configured in the custom preset where supported.
 
             Only scan systems you own or have explicit permission to test.
 
@@ -102,6 +135,9 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
     parser.add_argument("--with-optional", action="store_true", help="with --install-deps, also install optional recon/web/TLS tools")
     parser.add_argument("--dry-run", action="store_true", help="with --install-deps, print install commands only")
     parser.add_argument("--check-deps", action="store_true", help="print dependency status and exit")
+    parser.add_argument("--web", "--serve", dest="web", action="store_true", help="start the local ReconKit web panel")
+    parser.add_argument("--host", default="127.0.0.1", help="with --web, host/interface to bind")
+    parser.add_argument("--port", type=int, default=8080, help="with --web, TCP port to bind")
     parser.add_argument("--uninstall", action="store_true", help="remove the installed reconkit command launcher")
     parser.add_argument("--purge", action="store_true", help="with --uninstall, also remove ReconKit config/presets and ~/.reconkit install directory when safe")
     parser.add_argument("--ai", action="store_true", help="analyze scan results using recon_config.json AI settings")
@@ -143,6 +179,7 @@ def render_home(colorize: bool = True) -> str:
         ["Install tools", "reconkit --install-deps --with-optional"],
         ["Check setup", "reconkit --check-deps"],
         ["Uninstall", "reconkit --uninstall --dry-run"],
+        ["Web panel", "reconkit --web --host 127.0.0.1 --port 8080"],
         ["AI test", "reconkit --test-ai"],
     ]
     tips_rows = [
@@ -171,6 +208,10 @@ def main(argv: list[str] | None = None) -> int:
         print(f"Telegram: {TELEGRAM}")
         print(COPYRIGHT)
         return 0
+
+    if args.web:
+        from .webpanel import run_web_panel
+        return run_web_panel(args.host, args.port)
 
     if args.preset_list:
         print(hr("Scan Presets", colorize=colorize))
