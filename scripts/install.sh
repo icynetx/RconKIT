@@ -90,16 +90,7 @@ PYZIP
 }
 
 mkdir -p "$(dirname "$INSTALL_DIR")"
-if [ -d "$INSTALL_DIR/.git" ]; then
-  say "[*] Updating existing ReconKit checkout: $INSTALL_DIR"
-  if ! run_quiet git -C "$INSTALL_DIR" pull --ff-only; then
-    say "[!] git pull failed; keeping existing checkout and continuing"
-  fi
-elif [ -e "$INSTALL_DIR" ]; then
-  say "[!] Install path exists but is not a git checkout: $INSTALL_DIR"
-  say "    Set RECONKIT_HOME to another path or remove that directory."
-  exit 1
-else
+clone_repo() {
   say "[*] Cloning ReconKit into $INSTALL_DIR"
   if need git; then
     if need timeout; then
@@ -116,6 +107,23 @@ else
     say "[!] git clone failed/timed out after about ${GIT_TIMEOUT}s; trying ZIP fallback"
     fetch_zip
   fi
+}
+
+if [ -d "$INSTALL_DIR/.git" ]; then
+  say "[*] Updating existing ReconKit checkout: $INSTALL_DIR"
+  if run_quiet git -C "$INSTALL_DIR" fetch --depth 1 origin main && run_quiet git -C "$INSTALL_DIR" reset --hard origin/main; then
+    say "[+] Existing checkout refreshed from origin/main"
+  else
+    say "[!] git refresh failed; replacing checkout with a fresh copy"
+    rm -rf "$INSTALL_DIR"
+    clone_repo
+  fi
+elif [ -e "$INSTALL_DIR" ]; then
+  say "[*] Replacing existing non-git install path: $INSTALL_DIR"
+  rm -rf "$INSTALL_DIR"
+  clone_repo
+else
+  clone_repo
 fi
 
 cd "$INSTALL_DIR"

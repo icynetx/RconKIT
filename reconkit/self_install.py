@@ -183,7 +183,11 @@ def uninstall_command_entry(name: str = "reconkit", *, purge: bool = False, dry_
         remove_path_block(colorize=colorize)
 
     if purge:
-        purge_targets = [repo_root / "recon_config.json", repo_root / "recon_presets.json"]
+        purge_targets = [
+            repo_root / "recon_config.json",
+            repo_root / "recon_presets.json",
+            repo_root / "reconkit_web.db",
+        ]
         home_root = Path.home() / ".reconkit"
         for item in purge_targets:
             if item.exists():
